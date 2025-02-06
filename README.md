@@ -12,6 +12,54 @@ This section provides a quick overview of how to get started with meowdoc.
 pip install meowdoc
 ```
 
+## Usage
+
+make a config.toml file.
+
+```toml
+[main]
+mkdocs_dir = "docs"
+docs_dir_name = "docs"
+input_path = "meowdoc" # or any directory such as `src/`
+create_mkdocs = false
+
+[project]
+name = "Meowdoc"
+description = "Meow! Meowdoc is a tool to generate documentation so that you don't have to :3. Read the documentation to find more!"
+repo_url = "https://github.com/re-masashi/meowdoc"
+
+[ignore]
+patterns = [
+    ".venv",
+    "venv",
+    "node_modules",
+    ".git",
+    "__pycache__",
+    ".env",
+    "requirements.txt"
+]
+
+[llm]
+provider = "gemini"  # Options: gemini, openai, ollama, etc.
+api_key_file = "secrets/gemini_api_key.txt"  # Path to the file containing the API key
+# base_url = "http://localhost:11434"  # Required for Ollama
+model = "gemini-2.0-flash-exp"  # Model name
+```
+
+Then run
+
+```bash
+python -m meowdoc.cli
+```
+
+You should see your docs succesfully created
+Then, run
+
+```bash
+cd docs # or the folder of ur docs
+mkdocs serve
+```
+
 ## Contributing to Meowdoc
 
 We welcome contributions to Meowdoc! Whether you're fixing a bug, adding a new feature, improving documentation, or suggesting ideas, we appreciate your help. Please take a moment to review this guide before contributing.
