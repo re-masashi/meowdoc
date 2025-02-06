@@ -5,3 +5,4 @@ build/
 secrets/*
 .env
 __pycache__/
+meowdoc/__pycache__/
