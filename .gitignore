@@ -4,3 +4,4 @@ build/
 .ruff_cache/
 secrets/*
 .env
+__pycache__/
