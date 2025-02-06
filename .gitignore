@@ -1,0 +1,6 @@
+.venv/
+venv/
+build/
+.ruff_cache/
+secrets/*
+.env
