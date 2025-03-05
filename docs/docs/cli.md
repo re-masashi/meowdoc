@@ -2,76 +2,65 @@
 
 ## Module Description
 
-This module serves as the command-line interface (CLI) for MeowDoc. It handles argument parsing, configuration loading, LLM provider setup, interactive mode, MkDocs project creation, and orchestrates the documentation generation process using the `meowdoc` core library. The entry point is the `main` function, which is executed when the script is run.
-
-## Table of Contents
-
-- [Dependencies](#dependencies)
-- [`main()` Function](#main-function)
-- [Configuration Loading and Handling](#configuration-loading-and-handling)
-  - [`load_config(config_path)` Function](#load_configconfig_path-function)
-  - [`override_config_with_args(config, args)` Function](#override_config_with_argsconfig-args-function)
-  - [`handle_interactive_mode(config, args)` Function](#handle_interactive_modeconfig-args-function)
-  - [`validate_main_config(config, parser)` Function](#validate_main_configconfig-parser-function)
-- [LLM Provider Setup](#llm-provider-setup)
-  - [`get_llm_provider(config)` Function](#get_llm_providerconfig-function)
-- [MkDocs Project Handling](#mkdocs-project-handling)
-  - [`handle_mkdocs_setup(mkdocs_dir, docs_dir_name, create_mkdocs)` Function](#handle_mkdocs_setupmkdocs_dir-docs_dir_name-create_mkdocs-function)
-- [Documentation Generation](#documentation-generation)
-- [Logging](#logging)
-  - [`log_configuration(config)` Function](#log_configurationconfig-function)
-- [Argument Parsing](#argument-parsing)
-  - [`add_parser_args(parser)` Function](#add_parser_argsparser-function)
+The `cli.py` module serves as the command-line interface (CLI) for MeowDoc, a documentation generator that leverages Large Language Models (LLMs) and MkDocs. It handles argument parsing, configuration loading, LLM provider initialization, interactive mode, and ultimately orchestrates the documentation generation process.
 
 ## Dependencies
 
 This module relies on the following external libraries:
 
--   `os`: For interacting with the operating system, such as accessing environment variables and checking file paths.
+-   `os`: For interacting with the operating system, such as accessing environment variables and checking file existence.
 -   `dotenv`: For loading environment variables from a `.env` file.
--   `logging`: For logging messages and debugging information.
+-   `logging`: For logging messages during the execution of the script.
 -   `argparse`: For parsing command-line arguments.
--   `toml`: For parsing TOML configuration files.
--   `meowdoc.core`:  For the core documentation generation logic (classes and functions).
--   `meowdoc.mkdocs`: For interacting with MkDocs (creating projects, updating navigation).
--   `meowdoc.llm`: For handling LLM provider selection and interaction.
--   `google.generativeai`: For interacting with the Gemini LLM (if selected).
+-   `toml`: For reading and parsing TOML configuration files.
+-   `google.generativeai`: For interacting with the Gemini API.
+-   `meowdoc.core`: For the core documentation generation logic.
+-   `meowdoc.mkdocs`: For MkDocs project setup and navigation updates.
+-   `meowdoc.llm`: For handling different LLM providers.
 
-## `main()` Function
+## Functions
 
-The `main()` function orchestrates the entire documentation generation process:
+### `main()`
 
-1.  **Initialization:** Sets up logging, loads environment variables (including the Google API key), and configures the Gemini AI service.
-2.  **Argument Parsing:** Creates an `ArgumentParser` object, adds arguments using `add_parser_args()`, and parses the command-line arguments.
-3.  **Configuration Loading:** Loads the configuration from the specified TOML file using `load_config()`.  If no valid config is loaded, the program exits.
-4.  **Configuration Override:** Overrides configuration values with command-line arguments using `override_config_with_args()`.
-5.  **LLM Provider Setup:** Gets the appropriate LLM provider instance based on the configuration using `get_llm_provider()`. If no LLM provider is loaded, the program exits.
-6.  **Interactive Mode:** Handles interactive mode, prompting the user for configuration values if enabled via the `--interactive` flag, using `handle_interactive_mode()`.
-7.  **Configuration Validation:** Validates the main configuration using `validate_main_config()`.
-8.  **Configuration Extraction:** Extracts configuration values such as the input path, MkDocs directory, ignore patterns, project name, and description.
-9.  **Logging Configuration:** Logs the current configuration for debugging purposes, using `log_configuration()`.
-10. **Core Initialization:** Initializes the `MeowdocCore` instance with the extracted configuration values and the LLM provider.
-11. **MkDocs Setup:** Handles the creation of the MkDocs project if it doesn't exist, using `handle_mkdocs_setup()`.
-12. **Documentation Generation:** Processes the input path (either a file or a directory) using `generator.process_path()`. This function generates the documentation files.
-13. **Index Page Creation:** Creates the project's `index.md` file using `generator.create_project_index()`.
-14. **MkDocs Navigation Update:** Updates the MkDocs navigation based on the generated files using `mkdocs.update_mkdocs_nav()`.
-15. **Completion:** Logs a "Finished" message.
+```python
+def main():
+    """Main function to run MeowDoc."""
+```
 
-## Configuration Loading and Handling
+The `main` function is the entry point of the MeowDoc CLI application. It performs the following steps:
 
-This section describes the functions responsible for loading, validating, and overriding the configuration.
+1.  **Initialization**: Sets up logging, loads environment variables, and configures the Gemini API.
+2.  **Argument Parsing**: Creates an `ArgumentParser` instance, adds arguments using `add_parser_args()`, and parses the command-line arguments.
+3.  **Configuration Loading**: Loads the configuration from a TOML file using `load_config()`.
+4.  **Configuration Override**: Overrides configuration values with command-line arguments using `override_config_with_args()`.
+5.  **LLM Provider Initialization**: Gets an LLM provider instance using `get_llm_provider()`.
+6.  **Interactive Mode**: Handles interactive mode if enabled using `handle_interactive_mode()`.
+7.  **Configuration Validation**: Validates the main configuration using `validate_main_config()`.
+8.  **Configuration Extraction**: Extracts configuration values, using helper function defaults, for input path, MkDocs directory, documentation directory name, MkDocs creation flag, ignore patterns, project name, description, and repository URL.
+9.  **Configuration Logging**: Logs the current configuration using `log_configuration()`.
+10. **MeowdocCore Initialization**: Creates an instance of `MeowdocCore` with the loaded configuration.
+11. **MkDocs Setup**: Sets up the MkDocs project using `handle_mkdocs_setup()`.
+12. **Documentation Generation**: Processes the input path using `generator.process_path()` to generate documentation files.
+13. **Project Index Creation**: Generates the project index page using `generator.create_project_index()`.
+14. **MkDocs Navigation Update**: Updates the MkDocs navigation based on the generated files using `mkdocs.update_mkdocs_nav()`.
+15. **Completion**: Logs a "Finished." message.
 
-### `load_config(config_path)` Function
+### `load_config(config_path)`
 
-This function loads the TOML configuration file.
+```python
+def load_config(config_path):
+    """Loads and validates the TOML configuration."""
+```
 
--   **Parameters:**
-    -   `config_path` (str): The path to the TOML configuration file.
--   **Returns:**
-    -   `dict`: A dictionary containing the configuration if the file is loaded and parsed successfully.
-    -   `None`: If the file is not found or if there is an error parsing the TOML file.
+This function loads a TOML configuration file from the specified `config_path`. It handles `FileNotFoundError` and `toml.TomlDecodeError` exceptions, logging error messages and returning `None` if an error occurs. It performs basic validation to ensure that the config file contains required sections ('main', 'ignore', 'project', and 'llm').
 
-The function performs basic validation to ensure that the configuration file contains the required sections ("main", "ignore", "project", and "llm"). If the file does not exist or parsing fails, it logs an error message and returns `None`.
+**Parameters:**
+
+-   `config_path` (str): The path to the TOML configuration file.
+
+**Returns:**
+
+-   `dict`: A dictionary containing the configuration data, or `None` if an error occurred.
 
 **Example Usage:**
 
@@ -81,158 +70,221 @@ if config:
     print(config["main"]["input_path"])
 ```
 
-### `override_config_with_args(config, args)` Function
+### `override_config_with_args(config, args)`
 
-This function overrides configuration values with command-line arguments.
+```python
+def override_config_with_args(config, args):
+    """Overrides config values with command-line arguments."""
+```
 
--   **Parameters:**
-    -   `config` (dict): The configuration dictionary loaded from the TOML file.
-    -   `args` (argparse.Namespace): The parsed command-line arguments.
--   **Returns:**
-    -   `dict`: The updated configuration dictionary with overridden values.
+This function overrides configuration values with command-line arguments.  It prioritizes CLI arguments over the configuration file. It updates the `llm` section for provider, API key, base URL, and model. It extracts other relevant command line arguments to override values inside the `main` section.
 
-The function iterates through the command-line arguments and updates the corresponding values in the configuration dictionary.  It prioritizes command-line arguments over the values specified in the configuration file. It specifically handles the `ignore` argument to allow overriding ignore patterns.
+**Parameters:**
+
+-   `config` (dict): The configuration dictionary loaded from the TOML file.
+-   `args` (argparse.Namespace): The parsed command-line arguments.
+
+**Returns:**
+
+-   `dict`: The updated configuration dictionary with overridden values.
 
 **Example Usage:**
 
 ```python
-config = {"main": {"input_path": "src"}, "llm": {"provider": "openai"}}
-args = argparse.Namespace(input_path="lib", provider="gemini", api_key=None, base_url=None, model=None, config="config.toml", interactive=False, create_mkdocs=False, mkdocs_dir=None, docs_dir_name=None, ignore=None)
-updated_config = override_config_with_args(config, args)
-print(updated_config["main"]["input_path"])  # Output: lib
-print(updated_config["llm"]["provider"])  # Output: gemini
+config = override_config_with_args(config, args)
+print(config["llm"]["provider"])  # Might be overridden by --provider argument
 ```
 
-### `handle_interactive_mode(config, args)` Function
-
-This function handles interactive mode, prompting the user for configuration values.
-
--   **Parameters:**
-    -   `config` (dict): The configuration dictionary.
-    -   `args` (argparse.Namespace): The parsed command-line arguments.
--   **Returns:**
-    -   `dict`: The updated configuration dictionary with values provided by the user.
-
-If the `--interactive` flag is set, this function prompts the user for the following configuration values:
-
--   Input path
--   Gemini model to use
--   Whether to create an MkDocs project if it doesn't exist
--   MkDocs project directory
--   Docs directory name
--   Ignore patterns (comma-separated)
-
-The function updates the configuration dictionary with the user-provided values.
-
-**Example Usage:**
+### `get_llm_provider(config)`
 
 ```python
-config = {"main": {}, "ignore": {}, "llm": {}}
-args = argparse.Namespace(interactive=True, config="config.toml", input_path=None, create_mkdocs=False, mkdocs_dir=None, docs_dir_name=None, ignore=None, provider=None, api_key=None, base_url=None, model=None)
-updated_config = handle_interactive_mode(config, args)
+def get_llm_provider(config):
+    """Gets the LLM provider instance."""
 ```
 
-### `validate_main_config(config, parser)` Function
+This function retrieves an LLM provider instance based on the configuration. It calls `llm.get_llm_provider()` and handles `ValueError` exceptions, logging an error message and returning `None` if an error occurs.
 
-This function validates the main configuration.
+**Parameters:**
 
--   **Parameters:**
-    -   `config` (dict): The configuration dictionary.
-    -   `parser` (argparse.ArgumentParser): The argument parser.
--   **Returns:**
-    -   `None`
+-   `config` (dict): The configuration dictionary containing LLM provider settings.
 
-The function checks if the `input_path` is provided. If not, it prints the help message and exits. It also ensures that `ignore` and `patterns` exist within the config and sets default ignore patterns if needed.
+**Returns:**
 
-## LLM Provider Setup
-
-This section describes the function responsible for setting up the LLM provider.
-
-### `get_llm_provider(config)` Function
-
-This function gets the LLM provider instance.
-
--   **Parameters:**
-    -   `config` (dict): The configuration dictionary containing LLM provider settings.
--   **Returns:**
-    -   `meowdoc.llm.LLMProvider`: An instance of the selected LLM provider (e.g., GeminiLLM).
-    -   `None`: If there is an error getting the LLM provider.
-
-The function calls the `meowdoc.llm.get_llm_provider` function to get the LLM provider instance based on the configuration. If an error occurs (e.g., invalid provider name, missing API key), it logs an error message and returns `None`.  See `llm.py` for how this is handled.
+-   `llm.LLMProvider`: An instance of the LLM provider, or `None` if an error occurred.
 
 **Example Usage:**
 
 ```python
 llm_provider = get_llm_provider(config)
 if llm_provider:
-    print("LLM provider loaded successfully.")
+    response = llm_provider.generate("Generate a summary.")
 ```
 
-## MkDocs Project Handling
+### `handle_interactive_mode(config, args)`
 
-This section describes the functions responsible for creating and managing the MkDocs project.
+```python
+def handle_interactive_mode(config, args):
+    """Handles interactive mode input."""
+```
 
-### `handle_mkdocs_setup(mkdocs_dir, docs_dir_name, create_mkdocs)` Function
+This function handles interactive mode, prompting the user for configuration values if the `--interactive` flag is set. It populates the configuration dictionary based on user input.
 
-This function handles MkDocs project creation.
+**Parameters:**
 
--   **Parameters:**
-    -   `mkdocs_dir` (str): The directory for the MkDocs project.
-    -   `docs_dir_name` (str): The name of the "docs" directory inside the MkDocs project.
-    -   `create_mkdocs` (bool): A flag indicating whether to create the MkDocs project if it doesn't exist.
--   **Returns:**
-    -   `None`
+-   `config` (dict): The configuration dictionary.
+-   `args` (argparse.Namespace): The parsed command-line arguments.
 
-If `create_mkdocs` is True or the `mkdocs_dir` and `docs_dir_name` don't both exist, the function calls `mkdocs.create_mkdocs_project()` to create the MkDocs project. If project creation fails, the program exits.
+**Returns:**
+
+-   `dict`: The updated configuration dictionary with user-provided values.
 
 **Example Usage:**
 
 ```python
-handle_mkdocs_setup("docs", "docs", True)
+config = handle_interactive_mode(config, args)
+print(config["main"]["input_path"])  # User-provided input path
 ```
 
-## Documentation Generation
+### `validate_main_config(config, parser)`
 
-The core of the documentation generation process is handled by the `MeowdocCore` class in the `core.py` module. The `cli.py` module instantiates this class and calls its `process_path()` method to generate the documentation files.  After the files are generated, `cli.py` calls `generator.create_project_index()` to make an index page describing the project. Finally it calls `mkdocs.update_mkdocs_nav()` to update the navigation in the `mkdocs.yml` file, linking to the generated documentation.
+```python
+def validate_main_config(config, parser):
+    """Validates the main configuration."""
+```
 
-## Logging
+This function validates the main configuration, ensuring that the `input_path` is set. If it is not set, it prints the help message and exits. If the "ignore" section or "patterns" key are missing, it adds a default set of ignore patterns.
 
-The module uses the `logging` library to log messages and debugging information.
+**Parameters:**
 
-### `log_configuration(config)` Function
+-   `config` (dict): The configuration dictionary.
+-   `parser` (argparse.ArgumentParser): The argument parser.
 
-This function logs the current configuration.
+**Example Usage:**
 
--   **Parameters:**
-    -   `config` (dict): The configuration dictionary.
--   **Returns:**
-    -   `None`
+```python
+validate_main_config(config, parser)
+```
 
-The function logs the input path, model, MkDocs directory, docs directory name, and ignore patterns.
+### `handle_mkdocs_setup(mkdocs_dir, docs_dir_name, create_mkdocs)`
 
-## Argument Parsing
+```python
+def handle_mkdocs_setup(mkdocs_dir, docs_dir_name, create_mkdocs):
+    """Handles MkDocs project creation."""
+```
 
-The module uses the `argparse` library to parse command-line arguments.
+This function handles the MkDocs project setup. If `create_mkdocs` is `True`, it creates a new MkDocs project using `mkdocs.create_mkdocs_project()`. If the MkDocs project or the documentation directory doesn't exist, it creates a new MkDocs project.
 
-### `add_parser_args(parser)` Function
+**Parameters:**
 
-This function adds arguments to the argument parser.
+-   `mkdocs_dir` (str): The directory for the MkDocs project.
+-   `docs_dir_name` (str): The name of the documentation directory within the MkDocs project.
+-   `create_mkdocs` (bool): A flag indicating whether to create a new MkDocs project.
 
--   **Parameters:**
-    -   `parser` (argparse.ArgumentParser): The argument parser.
--   **Returns:**
-    -   `None`
+**Example Usage:**
 
-The function adds the following arguments:
+```python
+handle_mkdocs_setup(mkdocs_dir, docs_dir_name, create_mkdocs)
+```
 
--   `-c`, `--config`: Path to the configuration file (default: config.toml).
--   `input_path`: Path to the Python file or directory.
--   `--create-mkdocs`: Create mkdocs project if it doesn't exist.
--   `--mkdocs-dir`: Directory for the mkdocs project.
--   `--docs-dir-name`: Name of the docs directory inside the mkdocs project.
--   `--interactive`: Run in interactive mode.
--   `--ignore`: Ignore patterns (e.g., .venv venv node_modules).
--   `--provider`: LLM provider (gemini, openai).
--   `--api-key`: API key for the LLM provider.
--   `--base-url`: Base URL for local LLMs like Ollama.
--   `--model`: Model name for the LLM provider.
+### `log_configuration(config)`
+
+```python
+def log_configuration(config):
+    """Logs the current configuration."""
+```
+
+This function logs the current configuration values, including the input path, model, MkDocs directory, documentation directory name, and ignore patterns.
+
+**Parameters:**
+
+-   `config` (dict): The configuration dictionary.
+
+**Example Usage:**
+
+```python
+log_configuration(config)
+```
+
+### `add_parser_args(parser)`
+
+```python
+def add_parser_args(parser):
+    """Adds command-line arguments to the parser."""
+```
+
+This function adds command-line arguments to the `ArgumentParser` instance. These arguments allow users to configure MeowDoc from the command line.
+
+**Parameters:**
+
+-   `parser` (argparse.ArgumentParser): The argument parser.
+
+**Example Usage:**
+
+```python
+parser = argparse.ArgumentParser(description="Generate documentation using LLMs and MkDocs.")
+add_parser_args(parser)
+args = parser.parse_args()
+```
+
+## Usage Examples
+
+### Running MeowDoc with a configuration file
+
+```bash
+python cli.py -c config.toml
+```
+
+### Running MeowDoc in interactive mode
+
+```bash
+python cli.py --interactive
+```
+
+### Overriding configuration values with command-line arguments
+
+```bash
+python cli.py -c config.toml --provider openai --api-key YOUR_API_KEY --input_path ./my_project
+```
+
+### Creating MkDocs project along with documentation
+
+```bash
+python cli.py --create-mkdocs -c config.toml
+```
+
+## Related Files
+
+-   `core.py`: Contains the core logic for generating documentation from Python files using LLMs.
+-   `mkdocs.py`: Contains functions for creating and updating MkDocs projects and navigation.
+-   `llm.py` (Not provided in the original documentation, but assumed to exist):  Handles the interaction with different LLM providers (Gemini, OpenAI, Ollama, etc.).
+-   `themes.py`: Contains themes configurations and enable_theme function.
+-   `config.toml` (Example): An example TOML configuration file:
+
+    ```toml
+    [main]
+    input_path = "path/to/your/project"
+    mkdocs_dir = "docs"
+    docs_dir_name = "docs"
+    create_mkdocs = false
+
+    [ignore]
+    patterns = [".venv", "venv", "node_modules", ".git", "__pycache__", ".env", "requirements.txt"]
+
+    [project]
+    name = "My Project"
+    description = "A brief description of my project."
+    repo_url = "https://github.com/myusername/myproject"
+
+    [llm]
+    provider = "gemini"
+    model = "gemini-pro"
+    api_key = "YOUR_GEMINI_API_KEY" # Or set GOOGLE_API_KEY env var
+    ```
+
+## Notes
+
+-   The `GOOGLE_API_KEY` environment variable must be set for the Gemini API to function correctly, unless overridden by the `--api-key` command-line argument or interactive mode.
+-   The configuration file `config.toml` is used to store default settings for the documentation generation process.
+-   The `MeowdocCore` class in `core.py` handles the main logic for processing files and generating documentation.
+-   The `mkdocs.py` module is responsible for creating and updating the MkDocs project based on the generated documentation.
+- The LLM abstraction allows for swapping the LLM provider without rewriting the core logic. The interaction with the providers is handled by `meowdoc.llm`.

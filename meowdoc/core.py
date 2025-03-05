@@ -184,6 +184,8 @@ class MeowdocCore:
         else:
             logging.warning(f"Skipping invalid path: {input_path}")
 
+        print(generated_files)
+
         return generated_files
 
     def create_project_index(

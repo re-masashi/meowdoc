@@ -1,146 +1,116 @@
-```markdown
-# `mkdocs.py` Module Documentation
+# Module: `mkdocs.py`
 
-This module provides functions to create and update MkDocs projects. It handles the creation of a new MkDocs project, updating the `mkdocs.yml` configuration file, and enabling specified themes. It interacts with the `meowdoc` library for theme management and uses `yaml` for configuration file manipulation.
-
-## Module Overview
-
-The primary purpose of this module is to automate the setup and configuration of MkDocs projects. It simplifies the process of integrating generated documentation into an existing or new MkDocs project. The module offers two main functionalities: creating a new MkDocs project and updating an existing one with new navigation entries.
+This module provides functions for creating and updating MkDocs projects and their configurations, specifically focusing on integrating generated documentation into the MkDocs navigation structure. It interacts with the `meowdoc.themes` module to enable specified themes.
 
 ## Functions
 
 ### `update_mkdocs_nav(generated_files, is_input_dir, mkdocs_dir, docs_dir_name, name, description, theme="material")`
 
-Updates the `mkdocs.yml` file with navigation links to the generated documentation files.
+Updates the `mkdocs.yml` file of an MkDocs project to include generated documentation files in the navigation.
 
-#### Parameters:
+**Parameters:**
 
-*   `generated_files` (list): A list of file paths for which navigation links need to be added.
-*   `is_input_dir` (bool): Indicates whether the input was a directory or a single file. If True, it handles nested directory structures within the documentation.
-*   `mkdocs_dir` (str): The path to the MkDocs project directory.
-*   `docs_dir_name` (str): The name of the documentation directory within the MkDocs project (e.g., "docs").
-*   `name` (str): The name of the MkDocs site (used for `site_name` in `mkdocs.yml`).
-*   `description` (str): The description of the MkDocs site (not currently used).
-*   `theme` (str, optional): The theme to apply to the MkDocs site. Defaults to "material". This value is looked up in the `meowdoc.themes.THEMES` dictionary.
+*   `generated_files` (list): A list of file paths to the generated documentation files (Markdown files).
+*   `is_input_dir` (bool): A boolean indicating whether the input was a directory or a single file. If `True`, the function handles multiple files and creates a nested navigation structure. If `False`, it handles a single file.
+*   `mkdocs_dir` (str): The path to the MkDocs project directory (where `mkdocs.yml` is located).
+*   `docs_dir_name` (str): The name of the directory where the documentation files are stored within the MkDocs project (e.g., "docs").
+*   `name` (str): The name of the MkDocs site (used as `site_name` in `mkdocs.yml`).
+*   `description` (str):  Unused in the current implementation.  Intended as a project description.
+*   `theme` (str, optional): The name of the MkDocs theme to use. Defaults to "material". This value must be a key in the `meowdoc.themes.THEMES` dictionary.
 
-#### Functionality:
+**Functionality:**
 
-1.  **Loads `mkdocs.yml`:** Attempts to load the `mkdocs.yml` file using `yaml.safe_load`. Handles `FileNotFoundError` and `yaml.YAMLError` exceptions with appropriate logging.
-2.  **Configures Basic Settings:** Sets the `site_name` and `theme` in the `mkdocs.yml` configuration. The theme name is retrieved from `meowdoc.themes.THEMES` based on the `theme` parameter.
-3.  **Handles Navigation:**
-    *   If `is_input_dir` is True:
-        *   It creates a nested navigation structure based on the directory structure of the generated files.
-        *   The navigation is added under an "API" section within the `mkdocs.yml` file.
-        *   It utilizes a recursive function, `convert_to_mkdocs_nav`, to convert a nested dictionary representing the file structure into the list of dictionaries structure that MkDocs expects for its `nav`.
-    *   If `is_input_dir` is False (single file):
-        *   It creates a simple navigation entry for the single generated file.
-4.  **Writes to `mkdocs.yml`:** Writes the updated `mkdocs_config` back to the `mkdocs.yml` file, using `yaml.dump` with indentation for readability. Handles potential exceptions during file writing.
-5.  **Enables Theme:** Calls `themes.enable_theme` to perform any theme-specific setup.
+1.  **Loads `mkdocs.yml`:** Reads the existing `mkdocs.yml` file into a Python dictionary using `yaml.safe_load()`. Handles `FileNotFoundError` and `yaml.YAMLError` exceptions.
+2.  **Sets Site Name and Theme:** Updates the `site_name` and `theme` keys in the `mkdocs.yml` dictionary. The theme name is retrieved from `themes.THEMES[theme]["mkdocs_name"]`, which converts the `theme` to the format understood by `mkdocs`.
+3.  **Updates Navigation:**
+    *   If `is_input_dir` is `True` (directory input):
+        *   It checks if an "API" section already exists in the navigation. If not, it creates one.
+        *   It builds a nested dictionary `file_nav_structure` representing the directory structure of the generated documentation files.  This dictionary is keyed by the directory and file names, with values being the relative paths to the files.
+        *   A helper function `convert_to_mkdocs_nav` converts the nested dictionary into a list of dictionaries in the format expected by MkDocs for the navigation.
+        *   Extends the `api_section` with the generated navigation structure.
+    *   If `is_input_dir` is `False` (single file input):
+        *   It creates a simple navigation entry with the filename as the title and the relative path to the file as the link.
+        *   Appends this entry to the `nav` list in `mkdocs.yml`.
+4.  **Writes Updated `mkdocs.yml`:** Writes the updated `mkdocs.yml` dictionary back to the file using `yaml.dump()`.
+5.  **Enables Theme:** Calls `themes.enable_theme(theme)` to perform any necessary setup for the specified theme.
 
-#### Interactions:
+**Interactions with other modules:**
 
-*   Reads and writes the `mkdocs.yml` file.
-*   Uses the `meowdoc.themes` module to enable the specified theme.
-*   Relies on the provided `generated_files` list to create the navigation structure.
+*   **`meowdoc.themes`:**  Uses `themes.THEMES` to map the theme name, and calls `themes.enable_theme()` to enable the theme.
+*   **`yaml`:** Used for loading and dumping the `mkdocs.yml` file.
+*   **`os`:** Used for file path manipulation and checking file existence.
+*   **`logging`:**  Used for logging informational, error, and exception messages.
 
-#### Example Usage:
+**Example:**
 
 ```python
-generated_files = ["docs/module1.md", "docs/package/module2.md"]
+# Assuming generated_files = ["docs/api/module1.md", "docs/api/module2.md"]
 update_mkdocs_nav(
-    generated_files,
-    True,
-    "my_project",
-    "docs",
-    "My Project",
-    "A project description",
+    generated_files=["docs/api/module1.md", "docs/api/module2.md"],
+    is_input_dir=True,
+    mkdocs_dir="my_project",
+    docs_dir_name="docs",
+    name="My Project",
+    description="A description of my project",
     theme="material",
 )
 ```
+
+This would update the `mkdocs.yml` file in the `my_project` directory, adding an "API" section to the navigation containing links to `module1.md` and `module2.md`. The theme would be set to "material".
 
 ### `create_mkdocs_project(project_dir, docs_dir_name)`
 
-Creates a new MkDocs project in the specified directory if one doesn't already exist.
+Creates a new MkDocs project in the specified directory if one does not already exist.
 
-#### Parameters:
+**Parameters:**
 
 *   `project_dir` (str): The directory where the MkDocs project should be created.
-*   `docs_dir_name` (str): The name of the documentation directory that will be created inside the project (often "docs").
+*   `docs_dir_name` (str): The name of the documentation directory inside the MkDocs project.
 
-#### Functionality:
+**Functionality:**
 
-1.  **Checks for Existing Project:** Determines if a `mkdocs.yml` file already exists in the specified directory.
+1.  **Checks for Existing Project:** Checks if an `mkdocs.yml` file already exists in the `project_dir`.
 2.  **Creates New Project (if necessary):**
-    *   If no existing project is found, it uses the `mkdocs new` command to create a new MkDocs project in the specified directory.
-    *   It uses `subprocess.run` to execute the `mkdocs new` command. The `check=True` argument ensures that an exception is raised if the command fails.  `capture_output=True` and `text=True` capture stdout and stderr for logging.
-    *   Adds a default "Home" navigation entry to the `mkdocs.yml`.
-3.  **Logs Information:** Logs messages indicating whether a new project was created or if one already exists.
+    *   If `mkdocs.yml` doesn't exist, it uses `subprocess.run()` to execute the `mkdocs new <project_dir>` command.
+    *   Captures the standard output and standard error of the command for logging.
+    *   If the creation is successful, it opens the newly created `mkdocs.yml` file, loads its content, adds a default navigation entry `{"Home": "index.md"}`, and saves the updated configuration.
+3.  **Logs Status:** Logs messages indicating whether a new project was created or an existing one was found.
 
-#### Interactions:
+**Returns:**
 
-*   Executes the `mkdocs` command-line tool via `subprocess`.
-*   Creates a `mkdocs.yml` file with a default "Home" entry if it doesn't exist.
+*   `bool`: Returns `True` if a project existed or was successfully created. Returns `False` if the project creation failed.
 
-#### Example Usage:
+**Interactions with other modules:**
 
-```python
-create_mkdocs_project("my_project", "docs")
-```
+*   **`subprocess`:**  Used to execute the `mkdocs new` command.
+*   **`yaml`:** Used for loading and dumping the `mkdocs.yml` file when creating a new project.
+*   **`os`:** Used for file path manipulation and checking file existence.
+*   **`logging`:** Used for logging informational, error, and exception messages.
 
-## Usage Examples
-
-### Creating a New MkDocs Project and Updating Navigation
+**Example:**
 
 ```python
-from mkdocs import create_mkdocs_project, update_mkdocs_nav
-import os
-
-# Create a new MkDocs project if it doesn't exist
-project_dir = "my_project"
-docs_dir_name = "docs"
-create_mkdocs_project(project_dir, docs_dir_name)
-
-# Example generated documentation files
-generated_files = [
-    os.path.join(project_dir, docs_dir_name, "module1.md"),
-    os.path.join(project_dir, docs_dir_name, "package", "module2.md"),
-]
-
-# Update the mkdocs.yml file with navigation links
-update_mkdocs_nav(
-    generated_files,
-    True,  # is_input_dir
-    project_dir,
-    docs_dir_name,
-    "My Project",
-    "A project to document.",
-    theme="material",
-)
+success = create_mkdocs_project("my_project", "docs")
+if success:
+    print("MkDocs project created or already exists.")
+else:
+    print("Failed to create MkDocs project.")
 ```
 
-## Dependencies
+This would create a new MkDocs project in the `my_project` directory if one doesn't already exist.
 
-*   `os`: For file path manipulation.
-*   `logging`: For logging information, errors, and warnings.
-*   `yaml`: For reading and writing `mkdocs.yml` configuration files.
-*   `subprocess`: For running the `mkdocs` command-line tool.
-*   `meowdoc.themes`: For enabling and managing MkDocs themes.
+## Interaction with other modules (based on the provided context)
 
-## Notes
+*   **`core.py` (MeowdocCore):** The `mkdocs.py` module is called from `core.py` after the documentation files have been generated by the LLM.  Specifically, `update_mkdocs_nav` is likely called to update the `mkdocs.yml` file with the newly generated documentation. The `create_mkdocs_project` is likely called at the beginning of a project to initialise mkdocs.
 
-*   Error handling is implemented to catch common issues such as missing `mkdocs.yml` files or YAML parsing errors.
-*   The module assumes that the `mkdocs` command-line tool is installed and available in the system's PATH.
-*   The `meowdoc` themes need to be configured properly for the `themes.enable_theme` function to work as expected.
-*   When `is_input_dir` is True, the generated navigation structure mirrors the directory structure of the input files. This is useful for documenting projects with multiple modules and packages.
-*   The module uses relative paths for navigation links in `mkdocs.yml`, making the documentation portable.
+*   **`themes.py` (meowdoc.themes):**  The `update_mkdocs_nav` function directly interacts with the `meowdoc.themes` module to configure the MkDocs theme. The `themes.THEMES` dictionary is used to look up the correct name for the theme in `mkdocs.yml`, and the `themes.enable_theme` function is called to apply the theme.
 
-## Integration with `core.py`
+## Usage
 
-The `mkdocs.py` module is integrated with the `core.py` module as follows:
+The functions in this module are designed to be used within a larger documentation generation workflow, such as the one implemented by the `MeowdocCore` class in `core.py`. The general flow would be:
 
-1.  The `MeowdocCore` class in `core.py` uses the `mkdocs_dir` and `docs_dir` attributes to determine where the MkDocs project is located and where the documentation files should be placed.
-2.  After the documentation files are generated by the LLM and saved to the `docs_dir`, the `update_mkdocs_nav` function from `mkdocs.py` is called to update the `mkdocs.yml` file with the new documentation files. This ensures that the generated documentation is properly linked in the MkDocs navigation.
-3.  `create_mkdocs_project` can be used in `core.py` to create the initial mkdocs project if it doesn't exist.
+1.  Create a MkDocs project using `create_mkdocs_project()`.
+2.  Generate documentation files for the Python code using an LLM (as done in `core.py`).
+3.  Update the MkDocs navigation to include the generated documentation files using `update_mkdocs_nav()`.
 
-The `MeowdocCore` class initializes `mkdocs_dir` and `docs_dir` and likely calls the functions within `mkdocs.py` after generating the documentation markdown files.  The `project_name`, `project_description` and `repo_url` parameters in `MeowdocCore` are also leveraged by `mkdocs.py` to customize the mkdocs project.
-```
+This ensures that the generated documentation is properly integrated into the MkDocs site and can be easily accessed.

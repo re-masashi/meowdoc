@@ -32,7 +32,7 @@ def update_mkdocs_nav(
     mkdocs_config["site_name"] = name
     mkdocs_config["theme"] = {"name": themes.THEMES[theme]["mkdocs_name"]}
     nav = mkdocs_config["nav"]
-    nav = []
+    # nav = []
 
     if is_input_dir:
         api_section_exists = False

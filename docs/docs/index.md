@@ -13,119 +13,100 @@ pip install meowdoc
 ```
 Contributing
 
-## Contributing to Meowdoc
+## Contributing to meowdoc
 
-We welcome contributions to Meowdoc! Whether you're fixing a bug, adding a new feature, improving documentation, or suggesting ideas, we appreciate your help. Please take a moment to review this guide before contributing.
+We welcome contributions to meowdoc! Whether you're fixing a bug, proposing a new feature, or improving the documentation, your help is greatly appreciated.
 
-### How to Contribute
+Here's how you can contribute:
 
-Here are several ways you can contribute to Meowdoc:
+**1. Setting up your development environment:**
 
-*   **Report Bugs:** If you find a bug, please open an issue on our [GitHub issue tracker](link-to-github-issues). Be as descriptive as possible, including steps to reproduce the bug, the expected behavior, and the actual behavior.
+*   **Fork the repository:** Click the "Fork" button at the top right of the repository page. This creates a copy of the repository under your GitHub account.
 
-*   **Suggest Features:** Have an idea for a new feature? Open an issue on our [GitHub issue tracker](link-to-github-issues) and describe your suggestion in detail. Explain why you think this feature would be valuable and how it could be implemented.
-
-*   **Improve Documentation:** Good documentation is crucial. If you find errors, omissions, or areas where the documentation could be improved, please submit a pull request with your suggested changes.
-
-*   **Submit Code:** We encourage you to submit code contributions to fix bugs or add new features. Please follow the guidelines below.
-
-### Setting up Your Development Environment
-
-1.  **Fork the Repository:** Fork the Meowdoc repository on GitHub to your own account.
-2.  **Clone the Repository:** Clone your forked repository to your local machine:
-
+*   **Clone your fork:**
     ```bash
-    git clone git@github.com:YOUR_GITHUB_USERNAME/meowdoc.git
+    git clone https://github.com/<your-github-username>/meowdoc.git
     cd meowdoc
     ```
-3.  **Create a Virtual Environment (Recommended):** Create a virtual environment to isolate dependencies for this project. Using `venv` is a good option:
+    Replace `<your-github-username>` with your actual GitHub username.
 
+*   **Add the upstream repository:** This allows you to keep your fork synchronized with the main repository.
+    ```bash
+    git remote add upstream https://github.com/meowdoc/meowdoc.git
+    ```
+
+*   **Create a virtual environment (recommended):**
     ```bash
     python3 -m venv .venv
     source .venv/bin/activate  # On Linux/macOS
     .venv\Scripts\activate  # On Windows
     ```
-4.  **Install Dependencies:** Install the necessary dependencies:
 
+*   **Install dependencies:**  *(Replace `requirements.txt` with the correct file if needed)*
     ```bash
     pip install -r requirements.txt
     ```
-5.  **Install Pre-commit Hooks:** We use pre-commit hooks to enforce code style. Install them with:
 
+*   **Install pre-commit hooks (optional, but recommended):**
     ```bash
     pip install pre-commit
     pre-commit install
     ```
-    These will run automatically before each commit.
-6.  **Create a Branch:** Create a new branch for your changes:
+    This will automatically run checks on your code before you commit, ensuring code style and quality.
 
+**2. Making changes:**
+
+*   **Create a new branch:**  Create a branch for your changes.  Name it something descriptive, like `fix-typo-in-readme` or `add-new-feature`.
     ```bash
-    git checkout -b feature/your-feature-name
-    ```
-    or
-    ```bash
-    git checkout -b fix/your-bug-fix
+    git checkout -b <your-branch-name>
     ```
 
-### Submitting Pull Requests
+*   **Make your changes:**  Edit the code or documentation as needed.
 
-1.  **Make Your Changes:** Implement your changes, following the coding style and best practices of the project. Be sure to write clear and concise code. Add tests for any new functionality and ensure existing tests pass.
-2.  **Commit Your Changes:** Commit your changes with clear and descriptive commit messages.  Follow the conventional commits specification (see below).
-3.  **Run Tests:** Before submitting a pull request, make sure all tests pass:
+*   **Write tests:**  If you're adding new functionality, please write tests to ensure it works correctly and prevent regressions.
 
+*   **Follow the coding style:**  We try to adhere to the PEP 8 style guide for Python. The pre-commit hooks will help you with this.
+
+*   **Commit your changes:**
     ```bash
-    pytest  # Or the command to run tests in your specific project
+    git add .
+    git commit -m "Your descriptive commit message"
     ```
-4.  **Push Your Changes:** Push your branch to your forked repository:
 
+*   **Sync your fork:**  Before submitting a pull request, make sure your fork is up-to-date with the main repository.
     ```bash
-    git push origin feature/your-feature-name
+    git fetch upstream
+    git rebase upstream/main
     ```
-5.  **Create a Pull Request:** Go to your forked repository on GitHub and click the "Create Pull Request" button.
-6.  **Describe Your Changes:** In the pull request description, provide a clear and concise explanation of your changes, including the problem you're solving or the feature you're adding. Include links to any relevant issues.
-7.  **Code Review:** Your pull request will be reviewed by other contributors. Be prepared to address any feedback or suggestions.
-8.  **Squash Commits (If Requested):**  You may be asked to squash your commits into a single, logical commit before merging.
-9.  **Congratulations!** Once your pull request is approved, it will be merged into the main branch.
 
-### Coding Style
+**3. Submitting a pull request:**
 
-We adhere to the following coding style guidelines:
+*   **Push your changes to your fork:**
+    ```bash
+    git push origin <your-branch-name>
+    ```
 
-*   **Python:** We follow the PEP 8 style guide.  Use `flake8` and `black` to format your code.  Pre-commit should catch most style violations.
-*   **[Other Languages/Frameworks Used]:** (Describe coding style for other relevant languages or frameworks)
+*   **Create a pull request:**  Go to your fork on GitHub and click the "Compare & pull request" button.
 
-### Conventional Commits
+*   **Write a clear and descriptive pull request:**  Explain what problem you're solving, how you're solving it, and any potential side effects. Link to any relevant issues.
 
-We use the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification for commit messages. This helps us automate releases and generate changelogs.
+*   **Be responsive to feedback:**  We may ask you to make changes to your pull request.  Please be patient and address the feedback.
 
-A commit message should be structured as follows:
+*   **Pull requests will be reviewed by maintainers:**  Once approved, your pull request will be merged into the main branch.
 
-```
-<type>(<scope>): <description>
+**Guidelines for specific contributions:**
 
-[optional body]
+*   **Bug fixes:**  Include steps to reproduce the bug, and explain how your fix resolves it.
 
-[optional footer(s)]
-```
+*   **New features:**  Discuss your proposed feature with the maintainers before implementing it.  This will help ensure that the feature aligns with the project's goals.
 
-Examples:
+*   **Documentation:**  Please ensure that your documentation is clear, concise, and accurate.  Pay attention to grammar and spelling.
 
-*   `feat(ui): add dark mode toggle`
-*   `fix(auth): prevent unauthorized access`
-*   `docs: update contributing guidelines`
-*   `chore: update dependencies`
-*   `test: add unit tests for parser`
-*   `ci: configure github actions`
+**Code of Conduct:**
 
-### Code of Conduct
+Please note that this project has a Code of Conduct. By participating in this project, you agree to abide by its terms. You can find the Code of Conduct in `CODE_OF_CONDUCT.md` (if it exists, you should have one).
 
-Please abide by our [Code of Conduct](link-to-code-of-conduct) in all interactions within the project.
-
-### License
-
-By contributing to Meowdoc, you agree that your contributions will be licensed under the [Project License](link-to-license).
-
-Thank you for your contributions! We appreciate your help in making Meowdoc better.
+**Thank you for your contributions!**
 
 License
 
