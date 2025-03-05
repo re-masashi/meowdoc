@@ -1,0 +1,4 @@
+google-generativeai
+mkdocs
+python-dotenv
+mkdocs-material

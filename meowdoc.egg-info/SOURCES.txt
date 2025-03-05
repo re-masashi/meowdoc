@@ -1,0 +1,15 @@
+LICENSE
+README.md
+setup.py
+meowdoc/__init__.py
+meowdoc/cli.py
+meowdoc/core.py
+meowdoc/llm.py
+meowdoc/mkdocs.py
+meowdoc/themes.py
+meowdoc.egg-info/PKG-INFO
+meowdoc.egg-info/SOURCES.txt
+meowdoc.egg-info/dependency_links.txt
+meowdoc.egg-info/entry_points.txt
+meowdoc.egg-info/requires.txt
+meowdoc.egg-info/top_level.txt
