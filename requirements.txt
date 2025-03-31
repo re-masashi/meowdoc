@@ -3,3 +3,5 @@ google-generativeai
 mkdocs
 toml
 openai
+mkdocs-material
+pymdown-extensions

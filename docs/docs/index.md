@@ -11,7 +11,6 @@ This section provides a quick overview of how to get started with meowdoc.
 ```bash
 pip install meowdoc
 ```
-Contributing
 
 ## Contributing to meowdoc
 
@@ -24,42 +23,42 @@ Here's how you can contribute:
 *   **Fork the repository:** Click the "Fork" button at the top right of the repository page. This creates a copy of the repository under your GitHub account.
 
 *   **Clone your fork:**
-    ```bash
-    git clone https://github.com/<your-github-username>/meowdoc.git
-    cd meowdoc
-    ```
+  `
+  git clone https://github.com/<your-github-username>/meowdoc.git
+  cd meowdoc
+  `
     Replace `<your-github-username>` with your actual GitHub username.
 
 *   **Add the upstream repository:** This allows you to keep your fork synchronized with the main repository.
-    ```bash
-    git remote add upstream https://github.com/meowdoc/meowdoc.git
-    ```
+  `
+  git remote add upstream https://github.com/meowdoc/meowdoc.git
+  `
 
 *   **Create a virtual environment (recommended):**
-    ```bash
+    `
     python3 -m venv .venv
     source .venv/bin/activate  # On Linux/macOS
-    .venv\Scripts\activate  # On Windows
-    ```
+   .venv\Scripts\activate  # On Windows
+    `
 
 *   **Install dependencies:**  *(Replace `requirements.txt` with the correct file if needed)*
-    ```bash
+    `
     pip install -r requirements.txt
-    ```
+    `
 
 *   **Install pre-commit hooks (optional, but recommended):**
-    ```bash
+    `
     pip install pre-commit
     pre-commit install
-    ```
+    `
     This will automatically run checks on your code before you commit, ensuring code style and quality.
 
 **2. Making changes:**
 
 *   **Create a new branch:**  Create a branch for your changes.  Name it something descriptive, like `fix-typo-in-readme` or `add-new-feature`.
-    ```bash
+    `bash
     git checkout -b <your-branch-name>
-    ```
+    `
 
 *   **Make your changes:**  Edit the code or documentation as needed.
 
@@ -68,23 +67,23 @@ Here's how you can contribute:
 *   **Follow the coding style:**  We try to adhere to the PEP 8 style guide for Python. The pre-commit hooks will help you with this.
 
 *   **Commit your changes:**
-    ```bash
+    `bash
     git add .
     git commit -m "Your descriptive commit message"
-    ```
+    `
 
 *   **Sync your fork:**  Before submitting a pull request, make sure your fork is up-to-date with the main repository.
-    ```bash
+    `
     git fetch upstream
     git rebase upstream/main
-    ```
+    `
 
 **3. Submitting a pull request:**
 
 *   **Push your changes to your fork:**
-    ```bash
+    `
     git push origin <your-branch-name>
-    ```
+    `
 
 *   **Create a pull request:**  Go to your fork on GitHub and click the "Compare & pull request" button.
 

@@ -12,3 +12,29 @@ nav:
 site_name: Meowdoc
 theme:
   name: material
+  palette:
+    - scheme: default
+      primary: black
+      toggle:
+        icon: material/brightness-7 
+        name: Switch to dark mode
+
+    - scheme: slate
+      primary: black
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - search.suggest
+    - search.highlight
+
+markdown_extensions:
+  - pymdownx.highlight:
+      use_pygments: true
+      anchor_linenums: true
+      pygments_lang_class: true
+      auto_title: true
+      linenums_style: pymdownx-inline
+      line_spans: __span
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
