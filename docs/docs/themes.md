@@ -1,14 +1,16 @@
-# `themes.py` Module Documentation
+```markdown
+# `themes.py` Documentation
 
-This module defines a dictionary of available MkDocs themes and provides a function to enable a specific theme by installing the corresponding `pip` package. It interacts with the `mkdocs.py` module to update the `mkdocs.yml` configuration file with the selected theme.
+This module provides functionality to manage and enable themes for MkDocs documentation projects using `meowdoc`. It defines a dictionary of supported themes and a function to install and activate a specified theme.
 
 ## Module Overview
 
-This module handles the management of MkDocs themes. It maintains a dictionary (`THEMES`) that maps theme names to their corresponding `pip` package names and MkDocs theme names. The `enable_theme` function installs the necessary `pip` package for a given theme, allowing users to easily switch between different visual styles for their documentation.
+The `themes.py` module is responsible for:
+
+- Defining a dictionary (`THEMES`) that maps theme names to their corresponding package names and MkDocs names.
+- Providing a function (`enable_theme`) to install a specified theme using `pip`.
 
 ## `THEMES` Dictionary
-
-This dictionary stores the information about the available themes. Each key represents the theme name, and the corresponding value is another dictionary containing the `package_name` (the name of the `pip` package to install) and `mkdocs_name` (the name used within the `mkdocs.yml` file).
 
 ```python
 THEMES = {
@@ -18,13 +20,18 @@ THEMES = {
 }
 ```
 
-*   `default`: Represents the default MkDocs theme.  `package_name` is empty, so nothing is installed.
-*   `dracula`: Specifies the "dracula" theme, which requires the `mkdocs-dracula-theme` `pip` package and uses "dracula" as the theme name in `mkdocs.yml`.
-*   `material`: Specifies the "material" theme, which requires the `mkdocs-material` `pip` package and uses "material" as the theme name in `mkdocs.yml`.
+This dictionary stores information about available themes.  Each key represents a theme name (e.g., "default", "dracula", "material"). The value associated with each theme name is another dictionary containing two keys:
 
-## `enable_theme` Function
+- `"package_name"`: The name of the Python package that provides the theme. This is used with `pip install`.
+- `"mkdocs_name"`: The name of the theme as recognized by MkDocs.  This is used when configuring the theme in `mkdocs.yml`.
 
-This function installs the specified MkDocs theme package using `pip`.
+**Example:**
+
+The "dracula" theme is associated with the package `"mkdocs-dracula-theme"` and the MkDocs name `"dracula"`. This means that to use the Dracula theme, the `mkdocs-dracula-theme` package must be installed, and the `theme` setting in `mkdocs.yml` should be set to `"dracula"`.
+
+The "default" theme has empty strings for both `package_name` and `mkdocs_name`, implying it's the built-in MkDocs theme that doesn't require a separate package.
+
+## `enable_theme(theme="dracula")` Function
 
 ```python
 def enable_theme(theme="dracula"):
@@ -37,35 +44,39 @@ def enable_theme(theme="dracula"):
     pass
 ```
 
+This function installs the specified MkDocs theme using `pip`.
+
 **Parameters:**
 
-*   `theme` (str, optional): The name of the theme to enable. Defaults to "dracula". It must be a key present in the `THEMES` dictionary.
+- `theme` (str, optional): The name of the theme to enable. Defaults to "dracula". It's a key from `THEMES` dictionary.
 
 **Functionality:**
 
-1.  Retrieves the `package_name` from the `THEMES` dictionary using the provided `theme` name.
-2.  Executes the `pip install` command using `subprocess.run` to install the specified package.
-    *   `check=True`: Raises a `subprocess.CalledProcessError` if the command returns a non-zero exit code, indicating an error during installation.
-    *   `capture_output=True`: Captures the standard output and standard error streams of the `pip` command.
-    *   `text=True`: Decodes the captured output as text.
+1.  **Package Name Lookup:**  It retrieves the `package_name` associated with the specified `theme` from the `THEMES` dictionary.
+2.  **`pip` Installation:** It uses the `subprocess.run` function to execute the `pip install` command with the retrieved `package_name`.
+    -   `check=True`:  Raises a `subprocess.CalledProcessError` if the `pip` command fails (returns a non-zero exit code).
+    -   `capture_output=True`: Captures the standard output and standard error streams of the `pip` command.
+    -   `text=True`: Decodes the captured output as text.
 
 **Example Usage:**
 
 ```python
-import themes
+from meowdoc import themes
 
-# Enable the Dracula theme
-themes.enable_theme("dracula")
-
-# Enable the Material theme
-themes.enable_theme("material")
+themes.enable_theme("material")  # Installs the mkdocs-material theme.
 ```
 
-**Interaction with other modules:**
+**Interactions with other modules:**
 
-This function is called by `mkdocs.update_mkdocs_nav` after the mkdocs configuration file, `mkdocs.yml`, has been updated to use the relevant theme.
-It installs the necessary `pip` package to apply the configuration.
+This function is called by `mkdocs.py`'s `update_mkdocs_nav` function to ensure the correct theme package is installed after the `mkdocs.yml` file has been updated.
 
-## Error Handling
+**Error Handling:**
 
-The `enable_theme` function uses `check=True` in `subprocess.run`.  If the `pip install` command fails (e.g., due to network issues or an invalid package name), a `subprocess.CalledProcessError` will be raised, halting the execution. It's good practice to wrap this call in a `try...except` block in the calling function (`mkdocs.update_mkdocs_nav`) to handle potential installation errors gracefully.
+The `check=True` argument in `subprocess.run` will raise an exception if the `pip install` command fails.  The calling code (in `mkdocs.py`) should handle this exception.  The  `capture_output=True` provides additional details in the error message if the install fails.
+
+## Relationship to Other Modules
+
+-   **`mkdocs.py`**: This module uses the `THEMES` dictionary to determine the correct MkDocs theme name and calls the `enable_theme` function to install the theme package.  Specifically, `update_mkdocs_nav` calls `enable_theme`.
+-   **`cli.py`**:  Indirectly, `cli.py` uses `themes.py`. It allows specifying the theme as an argument, which is then used when calling `mkdocs.py` to update the MkDocs configuration, which then calls `themes.py`.
+-   **`core.py`**: This module is not directly coupled with `themes.py`.
+```

@@ -9,7 +9,7 @@ import google.generativeai as genai
 def main():
     """Main function to run MeowDoc."""
 
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.basicConfig(level=logging.ERROR, format="%(asctime)s - %(levelname)s - %(message)s")
     load_dotenv()  # Load environment variables
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
@@ -54,15 +54,22 @@ def main():
         llm_provider,
     )
 
+    print("checking for existing mkdocs project...")
     handle_mkdocs_setup(mkdocs_dir, docs_dir_name, create_mkdocs)  # Create mkdocs if needed
 
-    is_input_dir = os.path.isdir(input_path)
-    generated_files = generator.process_path()
 
+    print("processing input path...")
+    generated_files = generator.process_path()
+    
     generator.create_project_index()
+    print("creating project index")
 
     if generated_files:
+        is_input_dir = os.path.isdir(input_path)
         mkdocs.update_mkdocs_nav(generated_files, is_input_dir, mkdocs_dir, docs_dir_name, project_name, description)
+        mkdocs.update_mkdocs_config_from_toml(config, mkdocs_dir)
+        mkdocs.finalize(mkdocs_dir)
+        print("All docs generated")
 
     logging.info("Finished.")
 

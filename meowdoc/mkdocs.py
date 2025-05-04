@@ -3,6 +3,7 @@ import logging
 import yaml
 import subprocess
 from meowdoc import themes
+from collections import OrderedDict
 
 def update_mkdocs_nav(
     generated_files,
@@ -123,3 +124,91 @@ def create_mkdocs_project(project_dir, docs_dir_name):
     else:
         logging.info(f"MkDocs project already exists in: {project_dir}")
         return True
+
+    print("Created mkdocs project")
+
+def merge_dicts(existing, new):
+    """
+    Recursively merge two dictionaries. The `new` dictionary values take precedence,
+    but nested dictionaries are merged intelligently.
+    """
+    for key, value in new.items():
+        if isinstance(value, dict) and isinstance(existing.get(key), dict):
+            merge_dicts(existing[key], value)  # Recursively merge nested dictionaries
+        else:
+            existing[key] = value  # Overwrite or add the new value
+    return existing
+
+
+def dedupe_yaml_keep_last(yaml_str):
+    """
+    Deduplicates YAML keys by keeping only the last occurrence.
+    """
+    def construct_mapping(loader, node):
+        mapping = OrderedDict()
+        for key_node, value_node in node.value:
+            key = loader.construct_object(key_node)
+            value = loader.construct_object(value_node)
+            mapping[key] = value  # Overwrite if key exists
+        return mapping
+
+    class LastKeyLoader(yaml.SafeLoader):
+        pass
+
+    LastKeyLoader.add_constructor(
+        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+        construct_mapping
+    )
+
+    data = yaml.load(yaml_str, Loader=LastKeyLoader)
+    return yaml.dump(data, sort_keys=False)
+
+def finalize(mkdocs_dir):
+    mkdocs_config_path = os.path.join(mkdocs_dir, "mkdocs.yml")
+    logging.info(f"Finalizing mkdocs.yml: {mkdocs_config_path}")
+
+    try:
+        with open(mkdocs_config_path, "r", encoding="utf-8") as f:
+            yaml_str = f.read()
+    except FileNotFoundError:
+        logging.error("mkdocs.yml not found. Please create a mkdocs project first.")
+        return
+    except yaml.YAMLError as e:
+        logging.error(f"Error parsing mkdocs.yml: {e}")
+        return
+
+    deduped_yaml = dedupe_yaml_keep_last(yaml_str)
+
+    try:
+        with open(mkdocs_config_path, "w", encoding="utf-8") as f:
+            f.write(deduped_yaml)
+        logging.info("mkdocs.yml updated with deduplicated keys.")
+    except Exception as e:
+        logging.error(f"Error writing to mkdocs.yml: {e}")
+
+
+def update_mkdocs_config_from_toml(config, mkdocs_dir):
+    mkdocs_settings = config.get("mkdocs", {})  # Get the mkdocs section
+
+    mkdocs_config_path = os.path.join(mkdocs_dir, "mkdocs.yml")
+    logging.info(f"Updating mkdocs.yml: {mkdocs_config_path}")
+
+    try:
+        with open(mkdocs_config_path, "r") as f:
+            mkdocs_config = yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        logging.error("mkdocs.yml not found. Please create a mkdocs project first.")
+        return
+    except yaml.YAMLError as e:
+        logging.error(f"Error parsing mkdocs.yml: {e}")
+        return
+
+    # Merge mkdocs.yml with settings from config.toml
+    mkdocs_config = merge_dicts(mkdocs_config, mkdocs_settings)
+
+    try:
+        with open(mkdocs_config_path, "w") as f:
+            yaml.dump(mkdocs_config, f, indent=2)
+        logging.info("mkdocs.yml updated with settings from config.toml")
+    except Exception as e:
+        logging.error(f"Error writing to mkdocs.yml: {e}")

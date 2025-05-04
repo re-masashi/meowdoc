@@ -1,273 +1,239 @@
-# `core.py` Documentation
+# `core.py`
 
-This module defines the `MeowdocCore` class, which is the core component for generating documentation for Python projects using a Large Language Model (LLM) and MkDocs.  It handles file processing, interaction with the LLM, and the creation of Markdown files for the documentation.
+## Module Description
 
-## Module Contents
+This module defines the `MeowdocCore` class, which is the core component of the Meowdoc documentation generator. It leverages Large Language Models (LLMs) to automatically generate Markdown documentation for Python code, designed to be used with MkDocs. It handles file processing, interaction with LLMs, and the creation of MkDocs-compatible documentation files. The module facilitates the documentation process by reading Python code, prompting an LLM for documentation based on code context, and writing the generated documentation to Markdown files within a MkDocs project. The module also handles ignoring specified file patterns.
 
-### `MeowdocCore` Class
+## `MeowdocCore` Class
 
-The `MeowdocCore` class orchestrates the documentation generation process.  It takes a project's source code, uses an LLM to generate documentation, and then structures that documentation into Markdown files suitable for use with MkDocs.
+### Overview
 
-```python
-class MeowdocCore:
-    """A class to generate documentation for Python files using LLM and MkDocs."""
-```
+The `MeowdocCore` class orchestrates the documentation generation process.  It initializes with configuration parameters, processes input files or directories, interacts with a specified LLM, generates documentation for each file, and writes the resulting Markdown files. It is designed to work with multiple files by providing the LLM with context from other files in the same directory.
+
+### Attributes
+
+*   `input_path` (str): The path to the Python file or directory to document.
+*   `mkdocs_dir` (str): The path to the root directory of the MkDocs project.
+*   `docs_dir` (str): The name of the directory within the MkDocs project where the generated documentation will be placed.
+*   `ignore_patterns` (list[str]): A list of filename patterns to ignore during the documentation process.  These patterns use `fnmatch` syntax.
+*   `project_name` (str): The name of the project (used in the generated `index.md`).
+*   `project_description` (str): A brief description of the project (used in the generated `index.md`).
+*   `repo_url` (str): The URL of the project's repository (used in the generated `index.md`).
+*   `llm_provider` (LLMProvider): An instance of a class derived from `LLMProvider` (defined in `llm.py`) which provides an interface to a Large Language Model.
+#*   `model` (str, optional): The name of the LLM to use for generating documentation. Defaults to `"gemini-2.0-flash-exp"`.  (Commented out).
+
+### Methods
 
 #### `__init__(self, input_path, mkdocs_dir, docs_dir, ignore_patterns, project_name, project_description, repo_url, llm_provider)`
 
-Initializes the `MeowdocCore` instance. This involves setting up the paths for input, MkDocs configuration, and output documentation, as well as configuring ignore patterns, project metadata, and the LLM provider.
+Initializes a new `MeowdocCore` instance.
 
-```python
-    def __init__(
-        self, 
-        input_path,
-        mkdocs_dir,
-        docs_dir,
-        ignore_patterns,
-        project_name,
-        project_description,
-        repo_url,
-        llm_provider,
-    ):
-```
+*   **Parameters:**
+    *   `input_path` (str): The path to the Python file or directory to document.
+    *   `mkdocs_dir` (str): The path to the root directory of the MkDocs project.
+    *   `docs_dir` (str): The name of the directory within the MkDocs project where the generated documentation will be placed.
+    *   `ignore_patterns` (list[str]): A list of filename patterns to ignore during the documentation process.
+    *   `project_name` (str): The name of the project.
+    *   `project_description` (str): A brief description of the project.
+    *   `repo_url` (str): The URL of the project's repository.
+    *   `llm_provider` (LLMProvider): An instance of a class derived from `LLMProvider` (defined in `llm.py`) which provides an interface to a Large Language Model.
+    #*   `model` (str, optional): The name of the LLM to use for generating documentation. Defaults to `"gemini-2.0-flash-exp"`. (Commented out)
 
-**Parameters:**
+*   **Returns:** None
 
-*   `input_path` (str): The path to the directory containing the Python source code, or a path to a specific file. This is the code to be documented.
-*   `mkdocs_dir` (str): The path to the root directory of the MkDocs project.
-*   `docs_dir` (str): The name of the directory within the MkDocs project where the generated Markdown documentation will be placed.  This is relative to `mkdocs_dir`.
-*   `ignore_patterns` (list of str): A list of filename patterns to ignore during documentation generation. These patterns use `fnmatch` syntax (e.g., `*.pyc`, `__init__.py`).
-*   `project_name` (str): The name of the project.  Used in the generated `index.md` file.
-*   `project_description` (str): A short description of the project.  Used in the generated `index.md` file.
-*   `repo_url` (str): The URL of the project's repository (e.g., GitHub).
-*   `llm_provider` (object): An object that provides an interface to a Large Language Model (LLM). This object must have a `generate` method that accepts a prompt string and returns a string containing the LLM's response.  The specific implementation of this object will depend on the LLM being used.
+*   **Example:**
 
-**Example:**
+    ```python
+    from meowdoc import core
+    from meowdoc import llm
 
-```python
-# Assuming you have an LLM provider class called 'MyLLMProvider'
-# and a project directory structure.
-from core import MeowdocCore
+    # Assuming you have an LLMProvider instance (e.g., GeminiProvider)
+    # See llm.py for LLMProvider
+    llm_provider = llm.GeminiProvider(api_key="YOUR_API_KEY", model="gemini-pro")
 
-# Initialize the documentation generator
-doc_generator = MeowdocCore(
-    input_path="my_project",
-    mkdocs_dir="mkdocs",
-    docs_dir="docs",
-    ignore_patterns=["*.pyc", "__init__.py"],
-    project_name="MyProject",
-    project_description="A simple example project.",
-    repo_url="https://github.com/example/myproject",
-    llm_provider=MyLLMProvider()
-)
-```
+    generator = core.MeowdocCore(
+        input_path="my_project",
+        mkdocs_dir="mkdocs_site",
+        docs_dir="reference",
+        ignore_patterns=[".venv", "tests"],
+        project_name="My Project",
+        project_description="A simple example project.",
+        repo_url="https://github.com/example/my_project",
+        llm_provider=llm_provider,
+    )
+    ```
 
 #### `generate_docs(self, file_path, all_file_contents)`
 
-Generates documentation for a single Python file using the LLM.  The LLM is provided with the content of the file to be documented, as well as the contents of all other files in the project to provide context.
+Generates documentation for a single file using an LLM, incorporating the content of related files for context.  It constructs a prompt that includes the target file's code and the code from all other files collected, and the documentation prompt. Optionally uses content from the `docguide` directory to provide additional guidance to the LLM.
 
-```python
-    def generate_docs(self, file_path, all_file_contents):
-        """Generates documentation for a single file with context from all related files."""
-```
+*   **Parameters:**
+    *   `file_path` (str): The path to the file to document.
+    *   `all_file_contents` (dict[str, str]): A dictionary where keys are relative file paths (relative to input_path) and values are the file contents.
 
-**Parameters:**
+*   **Returns:** str | None
+    *   The generated documentation in Markdown format, or `None` if an error occurred.
 
-*   `file_path` (str): The path to the Python file to generate documentation for.
-*   `all_file_contents` (dict): A dictionary where keys are filenames (relative to the input path specified in the constructor) and values are the contents of the corresponding files.  This allows the LLM to understand the context of the file being documented.
+*   **Raises:**
+    *   Logs an error message if the LLM call fails.
 
-**Returns:**
+*   **Details:**
+    1.  Constructs a prompt containing the target file's code and the code of related files as context for the LLM.
+    2.  If a file exists in the `docguide` directory with a name matching the file path (e.g., `docguide/my_module.py.md`), it appends the contents of this file to the prompt as additional guidelines.
+    3.  Calls the LLM to generate documentation based on the constructed prompt.
+    4.  Returns the generated Markdown documentation.
 
-*   str: The generated documentation in Markdown format, or `None` if an error occurred.
+*   **Example:**
 
-**Details:**
-
-This method constructs a prompt for the LLM that includes the file content to be documented and the content of all other files in the project for context.  It then calls the `generate` method of the `llm_provider` to get the LLM's response, which should be the documentation in Markdown format. The file name stored in all_file_contents is a relative path to the input directory.
-
-**Example:**
-
-```python
-# Assuming doc_generator is an instance of MeowdocCore,
-# file_path is the path to a Python file, and
-# all_file_contents is a dictionary of file contents.
-
-markdown_docs = doc_generator.generate_docs(file_path, all_file_contents)
-
-if markdown_docs:
-    print(markdown_docs)  # Output the generated Markdown documentation
-else:
-    print("Failed to generate documentation.")
-```
+    ```python
+    # Example usage (assuming 'generator' is an instance of MeowdocCore)
+    file_path = "my_module.py"
+    all_file_contents = {
+        "my_module.py": "def my_function():\n  \"\"\"A simple function\"\"\"\n  pass",
+        "another_module.py": "def another_function():\n  pass"
+    }
+    documentation = generator.generate_docs(file_path, all_file_contents)
+    if documentation:
+        print(documentation)
+    ```
 
 #### `create_index(self, mkdocs_dir, docs_dir, readme_content)`
 
-Creates the `index.md` file within the MkDocs documentation directory, using the provided content (typically the project's README file).  This serves as the main landing page for the documentation.
+Creates the `index.md` file within the MkDocs `docs_dir` directory, populating it with the provided content.  This is not actively used since `create_project_index` performs a similar task, but generates an LLM-based description.
 
-```python
-    def create_index(self, mkdocs_dir, docs_dir, readme_content):
-        """Creates the index.md file with the provided content."""
-```
+*   **Parameters:**
+    *   `mkdocs_dir` (str): The path to the root directory of the MkDocs project.
+    *   `docs_dir` (str): The name of the directory within the MkDocs project where the generated `index.md` will be placed.
+    *   `readme_content` (str): The content to write to the `index.md` file.
 
-**Parameters:**
+*   **Returns:** None
 
-*   `mkdocs_dir` (str): The path to the root directory of the MkDocs project.
-*   `docs_dir` (str): The name of the directory within the MkDocs project where the generated Markdown documentation will be placed. This is relative to `mkdocs_dir`.
-*   `readme_content` (str): The content to write to the `index.md` file.  This is often the content of the project's README file.
+*   **Example:**
 
-**Example:**
-
-```python
-# Assuming doc_generator is an instance of MeowdocCore,
-# mkdocs_dir and docs_dir are configured correctly, and
-# readme_content contains the content of the README file.
-
-with open("README.md", "r", encoding="utf-8") as f:
-    readme_content = f.read()
-
-doc_generator.create_index(
-    mkdocs_dir="mkdocs",
-    docs_dir="docs",
-    readme_content=readme_content
-)
-```
+    ```python
+    # Example usage (assuming 'generator' is an instance of MeowdocCore)
+    readme_content = "# My Project\n\nThis is the project's README."
+    generator.create_index("mkdocs_site", "reference", readme_content)
+    ```
 
 #### `should_ignore(self, path, ignore_patterns)`
 
-Determines whether a given file or directory path should be ignored based on the configured `ignore_patterns`.  It checks not only the path itself but also all of its parent directories to prevent processing files within ignored directories.
+Checks if a given path (file or directory) or any of its parent directories should be ignored based on the provided `ignore_patterns`.
 
-```python
-    def should_ignore(self, path, ignore_patterns):
-        """Checks if a path or any of its parent directories should be ignored."""
-```
+*   **Parameters:**
+    *   `path` (str): The path to check.
+    *   `ignore_patterns` (list[str]): A list of filename patterns to ignore (using `fnmatch` syntax).
 
-**Parameters:**
+*   **Returns:** bool
+    *   `True` if the path or any of its parent directories match any of the `ignore_patterns`, `False` otherwise.
 
-*   `path` (str): The path to check.
-*   `ignore_patterns` (list of str): A list of filename patterns to ignore.  These patterns use `fnmatch` syntax (e.g., `*.pyc`, `__init__.py`).
+*   **Details:**
+    *   Converts the path to an absolute path for consistent comparisons.
+    *   Iterates through the path's parent directories, checking if each directory name matches any of the `ignore_patterns`.
+    *   Uses `fnmatch.fnmatch` for pattern matching.
 
-**Returns:**
+*   **Example:**
 
-*   bool: `True` if the path or any of its parent directories should be ignored, `False` otherwise.
+    ```python
+    # Example usage (assuming 'generator' is an instance of MeowdocCore)
+    ignore_patterns = [".venv", "tests"]
+    print(generator.should_ignore(".venv/my_file.py", ignore_patterns))  # Output: True
+    print(generator.should_ignore("src/my_file.py", ignore_patterns))  # Output: False
+    print(generator.should_ignore("tests/my_file.py", ignore_patterns)) # Output: True
+    ```
 
-**Details:**
+#### `_collect_files(self)`
 
-This method converts the input path to an absolute path for consistent comparisons.  It then iteratively checks the path and each of its parent directories against the `ignore_patterns`.
+Walks the `input_path` and returns a list of tuples `(file_path, relative_path)`, filtering out files matching the ignore patterns.
 
-**Example:**
+*   **Parameters:** None
 
-```python
-# Assuming doc_generator is an instance of MeowdocCore,
-# path is the path to a file or directory, and
-# ignore_patterns is a list of patterns to ignore.
+*   **Returns:** list[tuple[str, str]]
+    *   A list of tuples, where each tuple contains the absolute file path and the relative path (relative to the `input_path`).
 
-if doc_generator.should_ignore(path="my_project/ignore_me.py", ignore_patterns=["ignore_me.py"]):
-    print("Ignoring the path.")
-else:
-    print("Processing the path.")
+*   **Details:**
+    1.  Uses `os.walk` to traverse the directory tree starting at `self.input_path`.
+    2.  For each file found, checks if the file or any of its parent directories should be ignored using `self.should_ignore`.
+    3.  If a file should not be ignored, appends a tuple `(file_path, relative_path)` to the list.
 
-if doc_generator.should_ignore(path="my_project/.hidden/important.py", ignore_patterns=[".hidden"]):
-    print("Ignoring the path.")
-else:
-    print("Processing the path.")
-```
+*   **Example:**
+    ```python
+    # Assuming the following directory structure:
+    # my_project/
+    #   module1.py
+    #   module2.py
+    #   .venv/
+    #     some_file.py
 
-#### `process_path(self, input_path=None)`
+    # Assuming 'generator' is an instance of MeowdocCore with input_path="my_project"
+    file_list = generator._collect_files()
+    # Example output (order may vary):
+    # [('my_project/module1.py', 'module1.py'), ('my_project/module2.py', 'module2.py')]
 
-Processes the input path, which can be either a single file or a directory.  If it's a directory, it recursively walks through the directory structure, generating documentation for each Python file.  It respects the configured `ignore_patterns` and ensures that the MkDocs directory itself is not processed.
+    ```
 
-```python
-    def process_path(self, input_path=None):
-```
+#### `process_path(self)`
 
-**Parameters:**
+Processes the input path (file or directory) to generate documentation.  This is the main method that drives the documentation generation process. This implementation uses concurrency via `ThreadPoolExecutor` to parallelize the documentation generation, significantly improving performance for larger projects.
 
-*   `input_path` (str, optional): The path to process. If `None`, it defaults to the `input_path` specified in the constructor.
+*   **Parameters:** None
 
-**Returns:**
+*   **Returns:** list[str]
+    *   A list of paths to the generated documentation files.
 
-*   list of str: A list of paths to the generated Markdown files.
+*   **Details:**
 
-**Details:**
+    1.  Collects a list of files to process using `self._collect_files()`.
+    2.  Pre-reads all file contents into memory for efficient access during parallel processing.
+    3.  Creates the destination directory for the generated documentation files.
+    4.  Uses a `ThreadPoolExecutor` to parallelize the documentation generation process:
+        *   Submits each file to the `self.generate_docs` method for documentation generation.
+        *   Writes the generated documentation to a Markdown file in the output directory, preserving the directory structure of the input files.
+    5.  Returns a list of the generated documentation file paths.
 
-This method is the main entry point for documentation generation. It handles the logic for traversing the input path (whether it's a file or a directory), reading file contents, calling the `generate_docs` method to generate the documentation, and writing the documentation to Markdown files in the output directory. The filenames in the all_file_contents dict are stored as relative paths to the input directory.
+*   **Example:**
 
-**Example:**
-
-```python
-# Assuming doc_generator is an instance of MeowdocCore and is properly initialized.
-
-generated_files = doc_generator.process_path()
-
-if generated_files:
-    print("Generated files:")
+    ```python
+    # Example usage (assuming 'generator' is an instance of MeowdocCore)
+    generated_files = generator.process_path()
     for file in generated_files:
-        print(file)
-else:
-    print("No files were generated.")
-```
+        print(f"Generated documentation: {file}")
+    ```
 
 #### `create_project_index(self)`
 
-Creates the project's main `index.md` file, which serves as the landing page for the documentation.  This includes the project name, a description, installation instructions, contributing guidelines (generated by the LLM), and license information.
+Creates the `index.md` file for the MkDocs project, including a project description and a "Contributing" section generated by the LLM.
 
-```python
-    def create_project_index(
-        self,
-    ):
-```
+*   **Parameters:** None
 
-**Parameters:**
+*   **Returns:** None
 
-*   None
+*   **Details:**
 
-**Returns:**
+    1.  Retrieves project name, project description and other attributes from the `MeowdocCore` instance.
+    2.  Constructs prompts for the LLM to generate a project description and a "Contributing" section.
+    3.  Calls the LLM to generate content for these sections.
+    4.  Creates the `index.md` file in the MkDocs `docs_dir` directory.
+    5.  Writes the generated project description and "Contributing" section, along with other standard content (e.g., installation instructions, license information), to the `index.md` file.
 
-*   None
+*   **Example:**
 
-**Details:**
+    ```python
+    # Example usage (assuming 'generator' is an instance of MeowdocCore)
+    generator.create_project_index()
+    ```
 
-This method uses the LLM to generate a "Contributing" section for the index page.  It then constructs the complete `index.md` content with the project name, description, installation instructions, the generated "Contributing" section, and license/repository information.  Finally, it writes the content to the `index.md` file in the appropriate directory.
+## Interactions with Other Modules
 
-**Example:**
+*   **`llm.py`:** The `MeowdocCore` class interacts with the `llm.py` module to utilize LLMs for documentation generation. It receives an `LLMProvider` instance during initialization and calls its `generate` method to obtain documentation based on code context.
+*   **`mkdocs.py`:** While `MeowdocCore` generates the documentation files, the `mkdocs.py` module is responsible for creating the MkDocs project (if it doesn't exist) and updating the `mkdocs.yml` configuration file to include the generated documentation in the site's navigation. The `cli.py` module handles calling functions in `mkdocs.py` based on the configuration provided to it.
 
-```python
-# Assuming doc_generator is an instance of MeowdocCore and is properly initialized.
+## Usage Examples
 
-doc_generator.create_project_index()
-```
+See the examples in the method documentation above.  Also, see `cli.py` for how the `MeowdocCore` class is integrated into the command-line interface.
 
-## Interaction with Other Modules
+## Notes
 
-*   **LLM Provider:** The `MeowdocCore` class depends on an external LLM provider, which is passed as the `llm_provider` argument to the constructor. This provider must have a `generate` method that accepts a text prompt and returns a string response.  The specifics of the LLM provider are not defined within this module, allowing for flexibility in choosing the LLM.
-
-*   **Operating System:** The `os` module is used for interacting with the file system, such as creating directories, walking through directory trees, and reading file contents.
-
-*   **Logging:**  The `logging` module is used to log information, warnings, and errors during the documentation generation process.
-
-*   **`fnmatch`:** Used for matching filenames against ignore patterns.
-
-*   **`pathlib`:**  Used for creating directories, including parent directories, in a platform-independent way.
-
-##  Example Usage
-
-A typical workflow involves the following steps:
-
-1.  **Initialization:** Create an instance of the `MeowdocCore` class, providing the necessary configuration parameters, including a LLM provider.
-
-2.  **Process Path:** Call the `process_path` method to start the documentation generation process, specifying the root directory of the Python project.
-
-3.  **Create Index:** Call the `create_index` method to create the project's `index.md` file, using the project's README content (or a custom index page).  Alternatively, call the `create_project_index` method to create an AI generated project index.
-
-## Error Handling
-
-The `MeowdocCore` class includes error handling to gracefully handle potential issues during the documentation generation process:
-
-*   **File Reading Errors:**  If a file cannot be read, a logging error is generated, and the process continues to the next file.
-*   **LLM Errors:**  If the LLM API call fails, a logging exception is generated, and `None` is returned (which is handled by the calling function).
-*   **Invalid Paths:**  If the specified input path is invalid, a logging warning is generated, and the path is skipped.
-
-## Future Enhancements
-
-*   **More sophisticated prompting:** Implement more sophisticated prompting strategies to improve the quality and accuracy of the generated documentation. This could involve providing more context to the LLM, such as dependency information or code execution examples.
-*   **Customizable output format:** Allow users to customize the output format of the generated documentation.
-*   **Integration with other documentation tools:** Integrate with other documentation tools, such as Sphinx, to provide a more comprehensive documentation solution.
+*   Ensure that the LLM API key is properly configured in environment variables or through command-line arguments.
+*   The quality of the generated documentation depends on the capabilities of the LLM and the clarity of the input code.
+*   Consider creating `docguide` files to provide more specific instructions to the LLM.

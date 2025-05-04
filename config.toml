@@ -25,3 +25,12 @@ provider = "gemini"  # Options: gemini, openai, ollama, etc.
 api_key_file = "secrets/gemini_api_key.txt"  # Path to the file containing the API key
 # base_url = "http://localhost:11434"  # Required for Ollama
 model = "gemini-2.0-flash-exp"  # Model name
+
+[mkdocs]
+
+[mkdocs.theme]
+name = "material"
+
+[mkdocs.theme.palette]
+scheme = "slate"
+primary = "black"

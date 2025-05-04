@@ -1,90 +1,100 @@
-# `__init__.py` Module Documentation
+```markdown
+# `meowdoc` Package
 
-This `__init__.py` file signifies that the current directory is a Python package.  In this case, it's an empty file, meaning it provides no explicit initialization code for the package.  Its primary purpose is to enable the directory to be treated as a module.
+This is the root package for `meowdoc`, a documentation generation tool that leverages LLMs and MkDocs.  It provides a convenient way to automatically generate documentation for Python projects.
 
-## Purpose
+## Overview
 
-The existence of `__init__.py` allows you to import modules from the package using dot notation. For example, if you have a package named `my_package` and a module named `my_module.py` inside it, you can import `my_module` using:
+The `meowdoc` package contains several modules that work together to create a complete documentation workflow:
 
-```python
-import my_package.my_module
-```
+*   `core.py`: Contains the core logic for processing input files, generating documentation using LLMs, and creating an MkDocs project index.
+*   `mkdocs.py`: Provides utilities for creating and updating MkDocs projects, including configuring the navigation and merging configuration files.
+*   `themes.py`:  Defines available themes and provides functions for enabling them in MkDocs.
+*   `cli.py`: Implements the command-line interface, allowing users to configure and run `meowdoc` from the terminal.
+*   `llm.py`: Defines an abstract base class and concrete classes for interaction with various Language Models (LLMs)
+*   `dummy_files/hw.rs`: A dummy file for testing.
 
-or
+## Package Structure
 
-```python
-from my_package import my_module
-```
-
-Without `__init__.py`, Python would not recognize the directory as a package.
-
-## Interaction with Other Modules
-
-Even though `__init__.py` is currently empty, it plays a crucial role in how other modules interact with the package.
-
-### Example 1: Importing Submodules
-
-Assume you have the following directory structure:
+The package structure is as follows:
 
 ```
-my_package/
+meowdoc/
 ├── __init__.py
-├── module_a.py
-└── module_b.py
+├── core.py
+├── mkdocs.py
+├── themes.py
+├── cli.py
+├── llm.py
+└── dummy_files/
+    └── hw.rs
 ```
 
-**module_a.py:**
+## Usage
 
-```python
-def function_a():
-    return "This is function A"
+To use `meowdoc`, you can install it using pip:
+
+```bash
+pip install meowdoc
 ```
 
-**module_b.py:**
+Then, you can run it from the command line, providing the path to your project's source code:
 
-```python
-def function_b():
-    return "This is function B"
+```bash
+meowdoc my_project
 ```
 
-To use these modules from another Python script, you'd import them via the package:
+For more detailed usage instructions, refer to the documentation for `cli.py`.
 
-```python
-import my_package.module_a
-import my_package.module_b
+## Module Details
 
-result_a = my_package.module_a.function_a()
-result_b = my_package.module_b.function_b()
+### `core.py`
 
-print(result_a)  # Output: This is function A
-print(result_b)  # Output: This is function B
+The `core.py` module contains the `MeowdocCore` class, which is responsible for:
+
+*   Walking through the input path and identifying files to process.
+*   Reading file contents.
+*   Interacting with the LLM provider to generate documentation.
+*   Creating the `index.md` file for the MkDocs project.
+
+### `mkdocs.py`
+
+The `mkdocs.py` module provides functions for:
+
+*   Creating a new MkDocs project if one doesn't already exist.
+*   Updating the `mkdocs.yml` configuration file with the generated documentation.
+*   Merging configuration settings from a TOML file into the `mkdocs.yml` file.
+*   Deduplicating keys from the `mkdocs.yml` file, keeping the last occurrence.
+
+### `themes.py`
+
+The `themes.py` module defines the available themes and provides a function to install and enable them:
+
+*   `enable_theme(theme)`: Installs the specified theme using pip.
+
+### `cli.py`
+
+The `cli.py` module provides the command-line interface for `meowdoc`. It handles:
+
+*   Parsing command-line arguments.
+*   Loading the configuration file.
+*   Initializing the LLM provider.
+*   Running the documentation generation process.
+
+### `llm.py`
+
+The `llm.py` module defines an abstract base class and concrete classes for interaction with various Language Models (LLMs):
+* `LLMProvider`: Abstract base class for LLM providers.
+* `GeminiProvider`: LLM provider for Google Gemini.
+* `OpenAiProvider`: LLM provider for OpenAI.
+* `OllamaProvider`: LLM provider for Ollama (local LLM).
+* `get_llm_provider`: Factory function for getting LLM provider instances
+
+### `dummy_files/hw.rs`
+
+A file for testing purposes.
+
+## `__init__.py`
+
+This file is intentionally left empty. It signifies that the current directory should be treated as a Python package.  It does not contain any code or perform any actions.
 ```
-
-### Example 2:  Adding Initialization Logic (Future Use)
-
-If you were to add code to `__init__.py`, that code would be executed when the package is imported.  For example, you could initialize global variables, import frequently used submodules, or configure the package.
-
-For example, if `__init__.py` contained:
-
-```python
-import my_package.module_a
-
-GLOBAL_SETTING = "default_value"
-
-def initialize_package():
-    print("Package initialized")
-```
-
-Then importing `my_package` would execute the code in `__init__.py`:
-
-```python
-import my_package
-
-print(my_package.GLOBAL_SETTING) # Output: default_value
-my_package.initialize_package() #Output: Package initialized
-print(my_package.module_a.function_a()) #Output: This is function A (assuming module_a.py contains function_a)
-```
-
-## Functionality (Currently None)
-
-Currently, the `__init__.py` file is empty and therefore doesn't contain any functions or classes. It only serves to identify the directory as a Python package.  As the package grows, you can add initialization logic here.

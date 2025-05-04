@@ -2,6 +2,7 @@ import os
 import logging
 import fnmatch
 import pathlib
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class MeowdocCore:
     """A class to generate documentation for Python files using LLM and MkDocs."""
@@ -66,6 +67,15 @@ class MeowdocCore:
         *   If there are no docstrings, try to infer the purpose of the code based on its structure and variable names.
         """
 
+        # Read docguide content if it exists
+        docguide_path = os.path.join("docguide", file_path + ".md")
+        if os.path.exists(docguide_path):
+            logging.info(f"Docguide content found for {file_path}")
+            with open(docguide_path, "r", encoding="utf-8") as guide_file:
+                guide_content = guide_file.read()
+                # Append guide content to the prompt
+                prompt += f"\n\n### Additional Guidelines:\n{guide_content}\n"
+
         try:
             # response = genai.GenerativeModel(model_name=self.model).generate_content(
             #     prompt
@@ -102,91 +112,141 @@ class MeowdocCore:
                 break
         return False
 
-    def process_path(self, input_path=None):
-        if input_path is None:
-            input_path = self.input_path
+    # def process_path(self, input_path=None):
+    #     if input_path is None:
+    #         input_path = self.input_path
 
-        mkdocs_dir = self.mkdocs_dir
-        docs_dir_name = self.docs_dir
-        ignore_patterns = self.ignore_patterns
-        logging.info(f"Processing path: {input_path}")
-        generated_files = []
+    #     mkdocs_dir = self.mkdocs_dir
+    #     docs_dir_name = self.docs_dir
+    #     ignore_patterns = self.ignore_patterns
+    #     logging.info(f"Processing path: {input_path}")
+    #     generated_files = []
 
-        if ignore_patterns is None:
-            ignore_patterns = []
+    #     if ignore_patterns is None:
+    #         ignore_patterns = []
 
-        if self.should_ignore(input_path, ignore_patterns):
-            logging.info(f"Ignoring path (matches pattern): {input_path}")
-            return []
+    #     if self.should_ignore(input_path, ignore_patterns):
+    #         logging.info(f"Ignoring path (matches pattern): {input_path}")
+    #         return []
 
-        if os.path.abspath(input_path) == os.path.abspath(mkdocs_dir):
-            logging.info(f"Ignoring the mkdocs directory: {input_path}")
-            return []
+    #     if os.path.abspath(input_path) == os.path.abspath(mkdocs_dir):
+    #         logging.info(f"Ignoring the mkdocs directory: {input_path}")
+    #         return []
 
-        docs_dir = os.path.join(mkdocs_dir, docs_dir_name)
+    #     docs_dir = os.path.join(mkdocs_dir, docs_dir_name)
 
-        if os.path.isfile(input_path):
-            logging.info(f"Input is a file: {input_path}")
-            if True:
-                with open(input_path, "r", encoding="utf-8") as f:
-                    all_file_contents = {}
-                    all_file_contents[os.path.basename(input_path)] = f.read()
-                result = self.generate_docs(input_path, all_file_contents)
-                if result is not None:
-                    docs = result
-                    output_filename = os.path.splitext(os.path.basename(input_path))[0] + ".md"
-                    output_path = os.path.join(docs_dir, output_filename)
-                    pathlib.Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
-                    with open(output_path, "w", encoding="utf-8") as outfile:
-                        outfile.write(docs)
-                    generated_files.append(output_path)
+    #     if os.path.isfile(input_path):
+    #         logging.info(f"Input is a file: {input_path}")
+    #         if True:
+    #             with open(input_path, "r", encoding="utf-8") as f:
+    #                 all_file_contents = {}
+    #                 all_file_contents[os.path.basename(input_path)] = f.read()
+    #             result = self.generate_docs(input_path, all_file_contents)
+    #             if result is not None:
+    #                 docs = result
+    #                 output_filename = os.path.splitext(os.path.basename(input_path))[0] + ".md"
+    #                 output_path = os.path.join(docs_dir, output_filename)
+    #                 pathlib.Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
+    #                 with open(output_path, "w", encoding="utf-8") as outfile:
+    #                     outfile.write(docs)
+    #                 generated_files.append(output_path)
+    #             else:
+    #                 logging.error("Error generating documentation for %s", input_path)
+    #     elif os.path.isdir(input_path):
+    #         logging.info(f"Input is a directory: {input_path}")
+    #         all_file_contents = {}  # Initialize OUTSIDE
+
+    #         for root, _, files in os.walk(input_path):
+    #             for file in files:
+    #                 file_path = os.path.join(root, file)
+    #                 relative_file_path = os.path.relpath(file_path, input_path)
+
+    #                 if self.should_ignore(file_path, ignore_patterns):
+    #                     logging.info(f"Ignoring file (matches pattern): {file_path}")
+    #                     continue
+
+    #                 if os.path.samefile(file_path, os.path.join(mkdocs_dir, docs_dir_name)):
+    #                     logging.info(f"Ignoring the mkdocs directory: {file_path}")
+    #                     continue
+
+    #                 if True:
+    #                     try:
+    #                         with open(file_path, "r", encoding="utf-8") as f:
+    #                             all_file_contents[relative_file_path] = f.read()  # KEY CHANGE: Relative path as key
+    #                     except Exception as e:
+    #                         logging.error(f"Error reading file {file_path}: {e}")
+    #                         continue
+
+    #                     docs = self.generate_docs(file_path, all_file_contents)  # Full path for generate_docs
+    #                     if docs:
+    #                         output_dir = os.path.join(docs_dir, os.path.dirname(relative_file_path))
+    #                         output_filename = os.path.splitext(os.path.basename(relative_file_path))[0] + ".md"
+    #                         output_path = os.path.join(output_dir, output_filename)
+
+    #                         pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)  # Create all dirs
+
+    #                         with open(output_path, "w", encoding="utf-8") as outfile:
+    #                             outfile.write(docs)
+    #                         generated_files.append(output_path)
+    #                     else:
+    #                         logging.error(f"Error generating docs for {file_path}")
+
+    #     else:
+    #         logging.warning(f"Skipping invalid path: {input_path}")
+
+    #     print(generated_files)
+
+    #     return generated_files
+
+    def _collect_files(self):
+        """Walk input_path and return list of (file_path, relative_path)."""
+        file_list = []
+        for root, _, files in os.walk(self.input_path):
+            if self.should_ignore(root, self.ignore_patterns):
+                continue
+            for fname in files:
+                fp = os.path.join(root, fname)
+                if self.should_ignore(fp, self.ignore_patterns):
+                    continue
+                rel = os.path.relpath(fp, self.input_path)
+                file_list.append((fp, rel))
+        return file_list
+
+    def process_path(self):
+        """Concurrent version of the old process_path; returns list of generated docs."""
+        files = self._collect_files()
+        all_contents = {}
+        # Pre‑read all files into memory (so reading itself can be parallelized too)
+        for fp, rel in files:
+            try:
+                with open(fp, 'r', encoding='utf-8') as f:
+                    all_contents[rel] = f.read()
+            except Exception as e:
+                logging.error(f"Failed reading {fp}: {e}")
+
+        mkdocs_docs = os.path.join(self.mkdocs_dir, self.docs_dir)
+        pathlib.Path(mkdocs_docs).mkdir(parents=True, exist_ok=True)
+
+        results = []
+        # Use ThreadPoolExecutor for I/O-bound work
+        with ThreadPoolExecutor() as exe:
+            future_to_file = {
+                exe.submit(self.generate_docs, fp, all_contents): (fp, rel)
+                for fp, rel in files
+            }
+            for fut in as_completed(future_to_file):
+                fp, rel = future_to_file[fut]
+                docs = fut.result()
+                if docs:
+                    out_fname = os.path.splitext(os.path.basename(rel))[0] + '.md'
+                    out_path = os.path.join(mkdocs_docs, os.path.dirname(rel), out_fname)
+                    pathlib.Path(os.path.dirname(out_path)).mkdir(parents=True, exist_ok=True)
+                    with open(out_path, 'w', encoding='utf-8') as out:
+                        out.write(docs)
+                    results.append(out_path)
                 else:
-                    logging.error("Error generating documentation for %s", input_path)
-        elif os.path.isdir(input_path):
-            logging.info(f"Input is a directory: {input_path}")
-            all_file_contents = {}  # Initialize OUTSIDE
-
-            for root, _, files in os.walk(input_path):
-                for file in files:
-                    file_path = os.path.join(root, file)
-                    relative_file_path = os.path.relpath(file_path, input_path)
-
-                    if self.should_ignore(file_path, ignore_patterns):
-                        logging.info(f"Ignoring file (matches pattern): {file_path}")
-                        continue
-
-                    if os.path.samefile(file_path, os.path.join(mkdocs_dir, docs_dir_name)):
-                        logging.info(f"Ignoring the mkdocs directory: {file_path}")
-                        continue
-
-                    if True:
-                        try:
-                            with open(file_path, "r", encoding="utf-8") as f:
-                                all_file_contents[relative_file_path] = f.read()  # KEY CHANGE: Relative path as key
-                        except Exception as e:
-                            logging.error(f"Error reading file {file_path}: {e}")
-                            continue
-
-                        docs = self.generate_docs(file_path, all_file_contents)  # Full path for generate_docs
-                        if docs:
-                            output_dir = os.path.join(docs_dir, os.path.dirname(relative_file_path))
-                            output_filename = os.path.splitext(os.path.basename(relative_file_path))[0] + ".md"
-                            output_path = os.path.join(output_dir, output_filename)
-
-                            pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)  # Create all dirs
-
-                            with open(output_path, "w", encoding="utf-8") as outfile:
-                                outfile.write(docs)
-                            generated_files.append(output_path)
-                        else:
-                            logging.error(f"Error generating docs for {file_path}")
-
-        else:
-            logging.warning(f"Skipping invalid path: {input_path}")
-
-        print(generated_files)
-
-        return generated_files
+                    logging.error(f"No docs for {fp}")
+        return results
 
     def create_project_index(
         self,
