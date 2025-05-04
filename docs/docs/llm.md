@@ -1,232 +1,322 @@
 # `llm.py` Documentation
 
-This module defines an abstract base class (`LLMProvider`) and concrete implementations for interacting with different Large Language Models (LLMs) such as Google Gemini, OpenAI, and Ollama (local LLM).  It also provides utility functions for retrieving the appropriate LLM provider based on configuration and reading API keys.
+This module defines an abstract base class for LLM providers and concrete implementations for Google Gemini, OpenAI, and Ollama (a local LLM). It also includes utility functions for initializing LLM providers based on configuration and reading API keys from files. This module is a core component of Meowdoc, enabling the generation of documentation from source code by leveraging large language models.
 
 ## Table of Contents
 
-1.  [Classes](#classes)
+1.  [Module Overview](#module-overview)
+2.  [Classes](#classes)
     *   [LLMProvider](#llmprovider)
     *   [GeminiProvider](#geminiprovider)
     *   [OpenAiProvider](#openaiprovider)
     *   [OllamaProvider](#ollamaprovider)
-2.  [Functions](#functions)
+3.  [Functions](#functions)
     *   [get\_llm\_provider](#get_llm_provider)
     *   [read\_api\_key](#read_api_key)
 
+## Module Overview
+
+The `llm.py` module provides a flexible and extensible way to integrate different LLM providers into the Meowdoc documentation generation process.  It utilizes an abstract base class (`LLMProvider`) to define a common interface for all providers, allowing for easy swapping and addition of new LLM services. Concrete implementations are provided for Gemini, OpenAI, and Ollama.  A factory function (`get_llm_provider`) is used to instantiate the appropriate provider based on a configuration dictionary. This module handles authentication and error handling for interacting with the LLM APIs, providing a simplified interface for the rest of the Meowdoc application.
+
+The `llm.py` module interacts with other modules within Meowdoc, primarily `core.py` and `cli.py`.
+
+*   `core.py`: Uses the `LLMProvider` interface and its implementations (e.g., `GeminiProvider`) to generate documentation from code. The `MeowdocCore` class in `core.py` takes an `LLMProvider` instance as input during initialization.
+*   `cli.py`: Uses the `get_llm_provider` function to instantiate an `LLMProvider` based on configuration settings loaded from a TOML file or command-line arguments. The `main` function in `cli.py` retrieves the LLM provider instance and passes it to the `MeowdocCore` class.
+
 ## Classes
 
-<a name="llmprovider"></a>
+### LLMProvider
 
-### `LLMProvider(ABC)`
+```python
+class LLMProvider(ABC):
+    """Base class for LLM providers."""
 
-Bases: `abc.ABC`
+    @abstractmethod
+    def generate(self, prompt: str) -> str:
+        """Generate a response based on the prompt."""
+        pass
+```
 
-Abstract base class for LLM providers. This class defines the interface that all LLM provider implementations must adhere to.
+**Description:**
 
-#### Abstract Methods
+The `LLMProvider` class is an abstract base class that defines the interface for all LLM provider implementations.  It ensures that all concrete providers have a `generate` method that takes a prompt string as input and returns a string containing the generated response.
 
-<a name="llmprovider.generate"></a>
+**Methods:**
 
-##### `generate(prompt: str) -> str`
+*   `generate(prompt: str) -> str`:
+    *   **Description:**  Abstract method that generates a response based on the given prompt.  Must be implemented by concrete subclasses.
+    *   **Parameters:**
+        *   `prompt` (str): The prompt string to be sent to the LLM.
+    *   **Returns:**
+        *   str: The generated response from the LLM.
 
-Abstract method to generate a response based on a given prompt.  This method must be implemented by all concrete LLM provider classes.
+### GeminiProvider
 
-*   **Parameters:**
-    *   `prompt` (*str*): The input prompt for the LLM.
+```python
+class GeminiProvider(LLMProvider):
+    """LLM provider for Google Gemini."""
 
-*   **Returns:**
-    *   *str*: The generated response from the LLM.
+    def __init__(self, api_key: str, model: str):
+        self.api_key = api_key
+        self.model = model
+        genai.configure(api_key=self.api_key)
 
-<a name="geminiprovider"></a>
+    def generate(self, prompt: str) -> str:
+        try:
+            response = genai.GenerativeModel(model_name=self.model).generate_content(prompt)
+            return response.text
+        except Exception as e:
+            logging.error(f"Error calling Gemini API: {e}")
+            return ""
+```
 
-### `GeminiProvider(LLMProvider)`
+**Description:**
 
-Bases: `llm.LLMProvider`
+The `GeminiProvider` class implements the `LLMProvider` interface for Google's Gemini LLM.  It handles authentication with the Gemini API and generates responses based on the provided prompt.
 
-LLM provider implementation for Google Gemini.  It handles authentication and interaction with the Google Gemini API.
+**Attributes:**
 
-#### Attributes
+*   `api_key` (str): The API key for accessing the Gemini API.
+*   `model` (str): The name of the Gemini model to use.
 
-*   `api_key` (*str*): The API key for accessing the Gemini API.
-*   `model` (*str*): The name of the Gemini model to use.
+**Methods:**
 
-#### Methods
+*   `__init__(api_key: str, model: str)`:
+    *   **Description:** Initializes a new instance of the `GeminiProvider` class.
+    *   **Parameters:**
+        *   `api_key` (str): The API key for accessing the Gemini API.
+        *   `model` (str): The name of the Gemini model to use.
+    *   **Returns:**
+        *   None
+*   `generate(prompt: str) -> str`:
+    *   **Description:** Generates a response using the Gemini API based on the given prompt.
+    *   **Parameters:**
+        *   `prompt` (str): The prompt string to be sent to the Gemini API.
+    *   **Returns:**
+        *   str: The generated response from the Gemini API, or an empty string if an error occurred.
 
-<a name="geminiprovider.__init__"></a>
+**Error Handling:**
 
-##### `__init__(api_key: str, model: str)`
+The `generate` method includes a `try...except` block to catch potential exceptions when calling the Gemini API.  If an error occurs, it logs the error message and returns an empty string.
 
-Initializes the `GeminiProvider` with an API key and model name.
+### OpenAiProvider
 
-*   **Parameters:**
-    *   `api_key` (*str*): The API key for Google Gemini.
-    *   `model` (*str*): The name of the Gemini model to use (e.g., "gemini-1.0-pro").
+```python
+class OpenAiProvider(LLMProvider):
+    """LLM provider for OpenAI."""
 
-<a name="geminiprovider.generate"></a>
+    def __init__(self, api_key: str, model: str):
+        self.api_key = api_key
+        self.model = model
+        openai.api_key = self.api_key
 
-##### `generate(prompt: str) -> str`
+    def generate(self, prompt: str) -> str:
+        try:
+            response = openai.Completion.create(
+                model=self.model,
+                prompt=prompt,
+                max_tokens=500
+            )
+            return response.choices[0].text.strip()
+        except Exception as e:
+            logging.error(f"Error calling OpenAI API: {e}")
+            return ""
+```
 
-Generates a response from the Google Gemini API based on the provided prompt.
+**Description:**
 
-*   **Parameters:**
-    *   `prompt` (*str*): The input prompt for Gemini.
+The `OpenAiProvider` class implements the `LLMProvider` interface for OpenAI's LLM models.  It handles authentication with the OpenAI API and generates responses based on the provided prompt.
 
-*   **Returns:**
-    *   *str*: The generated response from Gemini, or an empty string if an error occurs.  Errors are logged using the `logging` module.
+**Attributes:**
 
-*   **Example:**
-    ```python
-    provider = GeminiProvider(api_key="YOUR_API_KEY", model="gemini-1.0-pro")
-    response = provider.generate("Write a short poem about the ocean.")
-    print(response)
-    ```
+*   `api_key` (str): The API key for accessing the OpenAI API.
+*   `model` (str): The name of the OpenAI model to use.
 
-<a name="openaiprovider"></a>
+**Methods:**
 
-### `OpenAiProvider(LLMProvider)`
+*   `__init__(api_key: str, model: str)`:
+    *   **Description:** Initializes a new instance of the `OpenAiProvider` class.
+    *   **Parameters:**
+        *   `api_key` (str): The API key for accessing the OpenAI API.
+        *   `model` (str): The name of the OpenAI model to use.
+    *   **Returns:**
+        *   None
+*   `generate(prompt: str) -> str`:
+    *   **Description:** Generates a response using the OpenAI API based on the given prompt.
+    *   **Parameters:**
+        *   `prompt` (str): The prompt string to be sent to the OpenAI API.
+    *   **Returns:**
+        *   str: The generated response from the OpenAI API, or an empty string if an error occurred.
 
-Bases: `llm.LLMProvider`
+**Error Handling:**
 
-LLM provider implementation for OpenAI. It handles authentication and interaction with the OpenAI API.
+The `generate` method includes a `try...except` block to catch potential exceptions when calling the OpenAI API.  If an error occurs, it logs the error message and returns an empty string.
 
-#### Attributes
+### OllamaProvider
 
-*   `api_key` (*str*): The API key for accessing the OpenAI API.
-*   `model` (*str*): The name of the OpenAI model to use.
+```python
+class OllamaProvider(LLMProvider):
+    """LLM provider for Ollama (local LLM)."""
 
-#### Methods
+    def __init__(self, base_url: str, model: str):
+        self.base_url = base_url
+        self.model = model
 
-<a name="openaiprovider.__init__"></a>
+    def generate(self, prompt: str) -> str:
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "num_ctx": 4096
+                    }
+                }
+            )
+            response.raise_for_status()
+            return response.json().get("response", "")
+        except Exception as e:
+            logging.error(f"Error calling Ollama API: {e}")
+            return ""
+```
 
-##### `__init__(api_key: str, model: str)`
+**Description:**
 
-Initializes the `OpenAiProvider` with an API key and model name.
+The `OllamaProvider` class implements the `LLMProvider` interface for Ollama, which allows running LLMs locally.  It communicates with the Ollama API via HTTP requests to generate responses.
 
-*   **Parameters:**
-    *   `api_key` (*str*): The API key for OpenAI.
-    *   `model` (*str*): The name of the OpenAI model to use (e.g., "text-davinci-003").
+**Attributes:**
 
-<a name="openaiprovider.generate"></a>
+*   `base_url` (str): The base URL of the Ollama API.
+*   `model` (str): The name of the Ollama model to use.
 
-##### `generate(prompt: str) -> str`
+**Methods:**
 
-Generates a response from the OpenAI API based on the provided prompt.
+*   `__init__(base_url: str, model: str)`:
+    *   **Description:** Initializes a new instance of the `OllamaProvider` class.
+    *   **Parameters:**
+        *   `base_url` (str): The base URL of the Ollama API.
+        *   `model` (str): The name of the Ollama model to use.
+    *   **Returns:**
+        *   None
+*   `generate(prompt: str) -> str`:
+    *   **Description:** Generates a response using the Ollama API based on the given prompt.
+    *   **Parameters:**
+        *   `prompt` (str): The prompt string to be sent to the Ollama API.
+    *   **Returns:**
+        *   str: The generated response from the Ollama API, or an empty string if an error occurred.
 
-*   **Parameters:**
-    *   `prompt` (*str*): The input prompt for OpenAI.
+**Error Handling:**
 
-*   **Returns:**
-    *   *str*: The generated response from OpenAI, or an empty string if an error occurs. Errors are logged using the `logging` module.
-
-*   **Example:**
-    ```python
-    provider = OpenAiProvider(api_key="YOUR_API_KEY", model="text-davinci-003")
-    response = provider.generate("Translate 'Hello, world!' to French.")
-    print(response)
-    ```
-
-<a name="ollamaprovider"></a>
-
-### `OllamaProvider(LLMProvider)`
-
-Bases: `llm.LLMProvider`
-
-LLM provider implementation for Ollama, which allows running LLMs locally.
-
-#### Attributes
-
-*   `base_url` (*str*): The base URL of the Ollama API.
-*   `model` (*str*): The name of the Ollama model to use.
-
-#### Methods
-
-<a name="ollamaprovider.__init__"></a>
-
-##### `__init__(base_url: str, model: str)`
-
-Initializes the `OllamaProvider` with the base URL and model name.
-
-*   **Parameters:**
-    *   `base_url` (*str*): The base URL of the Ollama API (e.g., "http://localhost:11434").
-    *   `model` (*str*): The name of the Ollama model to use (e.g., "llama2").
-
-<a name="ollamaprovider.generate"></a>
-
-##### `generate(prompt: str) -> str`
-
-Generates a response from the local Ollama API based on the provided prompt.
-
-*   **Parameters:**
-    *   `prompt` (*str*): The input prompt for Ollama.
-
-*   **Returns:**
-    *   *str*: The generated response from Ollama, or an empty string if an error occurs. Errors are logged using the `logging` module.
-
-*   **Example:**
-    ```python
-    provider = OllamaProvider(base_url="http://localhost:11434", model="llama2")
-    response = provider.generate("Explain the concept of recursion.")
-    print(response)
-    ```
+The `generate` method includes a `try...except` block to catch potential exceptions when calling the Ollama API.  If an error occurs, it logs the error message and returns an empty string. The `response.raise_for_status()` method is used to raise an exception for bad HTTP status codes (e.g., 404, 500).
 
 ## Functions
 
-<a name="get_llm_provider"></a>
+### get\_llm\_provider
 
-### `get_llm_provider(config: dict) -> LLMProvider`
+```python
+def get_llm_provider(config: dict) -> LLMProvider:
+    """Initialize the LLM provider based on the configuration.
 
-Initializes and returns an LLM provider based on the configuration.
+    Args:
+        config (dict): Configuration dictionary containing LLM settings.
 
-*   **Parameters:**
-    *   `config` (*dict*): A dictionary containing the LLM settings.  The dictionary should have the following structure:
+    Returns:
+        LLMProvider: An instance of the specified LLM provider.
 
-        ```python
-        {
-            "llm": {
-                "provider": "gemini" | "openai" | "ollama",
-                "api_key_file": "path/to/api_key.txt",  # Required for Gemini and OpenAI
-                "base_url": "http://localhost:11434",   # Required for Ollama
-                "model": "model_name"
-            }
-        }
-        ```
+    Raises:
+        ValueError: If the configuration is invalid or missing required fields.
+    """
+    provider = config["llm"]["provider"]
+    api_key_file = config["llm"].get("api_key_file")
+    base_url = config["llm"].get("base_url")
+    model = config["llm"].get("model")
 
-*   **Returns:**
-    *   `LLMProvider`: An instance of the specified LLM provider (`GeminiProvider`, `OpenAiProvider`, or `OllamaProvider`).
+    if provider == "gemini":
+        if not api_key_file:
+            raise ValueError("API key file path is required for Gemini.")
+        api_key = read_api_key(api_key_file)
+        return GeminiProvider(api_key=api_key, model=model)
+    elif provider == "openai":
+        if not api_key_file:
+            raise ValueError("API key file path is required for OpenAI.")
+        api_key = read_api_key(api_key_file)
+        return OpenAiProvider(api_key=api_key, model=model)
+    elif provider == "ollama":
+        if not base_url:
+            raise ValueError("Base URL is required for Ollama.")
+        return OllamaProvider(base_url=base_url, model=model)
+    else:
+        raise ValueError(f"Unsupported LLM provider: {provider}")
+```
 
-*   **Raises:**
-    *   `ValueError`: If the configuration is invalid, missing required fields, or an unsupported LLM provider is specified.
+**Description:**
 
-*   **Example:**
-    ```python
-    config = {
-        "llm": {
-            "provider": "gemini",
-            "api_key_file": "api_key.txt",
-            "model": "gemini-1.0-pro"
-        }
+The `get_llm_provider` function acts as a factory for creating `LLMProvider` instances based on the provided configuration.  It reads the provider type from the configuration dictionary and instantiates the appropriate provider class (Gemini, OpenAI, or Ollama).  It also handles reading API keys from files and validates that required configuration parameters are present.
+
+**Parameters:**
+
+*   `config` (dict): A dictionary containing the configuration for the LLM provider.  This dictionary should have a `"llm"` key containing a sub-dictionary with the following keys:
+    *   `"provider"` (str):  The name of the LLM provider (e.g., `"gemini"`, `"openai"`, `"ollama"`).
+    *   `"api_key_file"` (str, optional): The path to the file containing the API key (required for Gemini and OpenAI).
+    *   `"base_url"` (str, optional): The base URL of the Ollama API (required for Ollama).
+    *   `"model"` (str): The name of the LLM model to use.
+
+**Returns:**
+
+*   `LLMProvider`: An instance of the specified `LLMProvider` class.
+
+**Raises:**
+
+*   `ValueError`: If the configuration is invalid or missing required fields.  Specifically, a `ValueError` is raised if:
+    *   The `"provider"` key is not found in the configuration.
+    *   The specified provider is not supported.
+    *   The `"api_key_file"` is missing when using the Gemini or OpenAI provider.
+    *   The `"base_url"` is missing when using the Ollama provider.
+
+**Example:**
+
+```python
+config = {
+    "llm": {
+        "provider": "gemini",
+        "api_key_file": "path/to/gemini_api_key.txt",
+        "model": "gemini-pro"
     }
-    provider = get_llm_provider(config)
-    ```
+}
+provider = get_llm_provider(config) # Returns a GeminiProvider instance
+```
 
-<a name="read_api_key"></a>
+### read\_api\_key
 
-### `read_api_key(path: str) -> str`
+```python
+def read_api_key(path):
+    content = ""
+    with open(path) as f:
+        content = f.read()
+    return content
+```
 
-Reads an API key from a file.
+**Description:**
 
-*   **Parameters:**
-    *   `path` (*str*): The path to the file containing the API key.
+The `read_api_key` function reads the API key from the file specified by the given path.
 
-*   **Returns:**
-    *   *str*: The API key read from the file.
+**Parameters:**
 
-*   **Example:**
-    ```python
-    api_key = read_api_key("api_key.txt")
-    ```
+*   `path` (str): The path to the file containing the API key.
 
-## Usage in Context
+**Returns:**
 
-This `llm.py` module is used by `core.py` to generate documentation. The `MeowdocCore` class in `core.py` takes an `LLMProvider` instance as input and uses it to generate documentation for Python files. The `cli.py` script uses the `get_llm_provider` function to initialize the LLM provider based on the configuration provided by the user via command-line arguments or a configuration file.
-`mkdocs.py` is then used to format the files in the correct Markdown format.
+*   `str`: The API key read from the file.
+
+**Error Handling:**
+
+The function does not explicitly handle file-related exceptions. Any `FileNotFoundError` or `IOError` will be raised and need to be handled by the caller.
+
+**Example:**
+
+```python
+api_key = read_api_key("path/to/api_key.txt")
+print(api_key)
+```

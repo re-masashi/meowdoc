@@ -3,7 +3,9 @@ import logging
 import yaml
 import subprocess
 from meowdoc import themes
-from collections import OrderedDict
+import json
+
+from pprint import pprint
 
 def update_mkdocs_nav(
     generated_files,
@@ -139,53 +141,33 @@ def merge_dicts(existing, new):
             existing[key] = value  # Overwrite or add the new value
     return existing
 
+def finalize(mkdocs_config):
+    if mkdocs_config.get("nav") is None:
+        return mkdocs_config
+    matches = list(map(_dedupe_API_elem, mkdocs_config["nav"]))
+    mkdocs_config["nav"] = matches
+    return mkdocs_config
 
-def dedupe_yaml_keep_last(yaml_str):
-    """
-    Deduplicates YAML keys by keeping only the last occurrence.
-    """
-    def construct_mapping(loader, node):
-        mapping = OrderedDict()
-        for key_node, value_node in node.value:
-            key = loader.construct_object(key_node)
-            value = loader.construct_object(value_node)
-            mapping[key] = value  # Overwrite if key exists
-        return mapping
+def _dedupe_API_elem(elem):
+    if elem.get("API") is not None:        
+        data = elem["API"]
+        pprint(data)
+        seen_json = set()
+        deduplicated_data = []
 
-    class LastKeyLoader(yaml.SafeLoader):
-        pass
+        for d in data:
+            # Convert the dictionary to a JSON string with sorted keys
+            # sort_keys=True is essential to ensure consistent string representation
+            # for dictionaries with the same content but different key order.
+            d_json = json.dumps(d, sort_keys=True)
 
-    LastKeyLoader.add_constructor(
-        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-        construct_mapping
-    )
+            if d_json not in seen_json:
+                seen_json.add(d_json)
+                deduplicated_data.append(d) # Append the original dictionary
 
-    data = yaml.load(yaml_str, Loader=LastKeyLoader)
-    return yaml.dump(data, sort_keys=False)
-
-def finalize(mkdocs_dir):
-    mkdocs_config_path = os.path.join(mkdocs_dir, "mkdocs.yml")
-    logging.info(f"Finalizing mkdocs.yml: {mkdocs_config_path}")
-
-    try:
-        with open(mkdocs_config_path, "r", encoding="utf-8") as f:
-            yaml_str = f.read()
-    except FileNotFoundError:
-        logging.error("mkdocs.yml not found. Please create a mkdocs project first.")
-        return
-    except yaml.YAMLError as e:
-        logging.error(f"Error parsing mkdocs.yml: {e}")
-        return
-
-    deduped_yaml = dedupe_yaml_keep_last(yaml_str)
-
-    try:
-        with open(mkdocs_config_path, "w", encoding="utf-8") as f:
-            f.write(deduped_yaml)
-        logging.info("mkdocs.yml updated with deduplicated keys.")
-    except Exception as e:
-        logging.error(f"Error writing to mkdocs.yml: {e}")
-
+        elem["API"] = deduplicated_data
+        pprint(deduplicated_data)
+    return elem
 
 def update_mkdocs_config_from_toml(config, mkdocs_dir):
     mkdocs_settings = config.get("mkdocs", {})  # Get the mkdocs section
@@ -205,6 +187,7 @@ def update_mkdocs_config_from_toml(config, mkdocs_dir):
 
     # Merge mkdocs.yml with settings from config.toml
     mkdocs_config = merge_dicts(mkdocs_config, mkdocs_settings)
+    mkdocs_config = finalize(mkdocs_config)
 
     try:
         with open(mkdocs_config_path, "w") as f:

@@ -57,7 +57,6 @@ def main():
     print("checking for existing mkdocs project...")
     handle_mkdocs_setup(mkdocs_dir, docs_dir_name, create_mkdocs)  # Create mkdocs if needed
 
-
     print("processing input path...")
     generated_files = generator.process_path()
     
@@ -68,11 +67,9 @@ def main():
         is_input_dir = os.path.isdir(input_path)
         mkdocs.update_mkdocs_nav(generated_files, is_input_dir, mkdocs_dir, docs_dir_name, project_name, description)
         mkdocs.update_mkdocs_config_from_toml(config, mkdocs_dir)
-        mkdocs.finalize(mkdocs_dir)
         print("All docs generated")
 
     logging.info("Finished.")
-
 
 def load_config(config_path):
     """Loads and validates the TOML configuration."""

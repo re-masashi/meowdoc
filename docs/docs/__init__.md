@@ -1,100 +1,74 @@
-```markdown
 # `meowdoc` Package
 
-This is the root package for `meowdoc`, a documentation generation tool that leverages LLMs and MkDocs.  It provides a convenient way to automatically generate documentation for Python projects.
+This is the root package file (`__init__.py`) for the `meowdoc` project.  Currently, it is empty.  It serves to indicate that the directory it resides in should be treated as a Python package.
 
-## Overview
+**Purpose**
 
-The `meowdoc` package contains several modules that work together to create a complete documentation workflow:
+*   Marks the directory as a Python package, allowing modules within the directory to be imported using the package name.
 
-*   `core.py`: Contains the core logic for processing input files, generating documentation using LLMs, and creating an MkDocs project index.
-*   `mkdocs.py`: Provides utilities for creating and updating MkDocs projects, including configuring the navigation and merging configuration files.
-*   `themes.py`:  Defines available themes and provides functions for enabling them in MkDocs.
-*   `cli.py`: Implements the command-line interface, allowing users to configure and run `meowdoc` from the terminal.
-*   `llm.py`: Defines an abstract base class and concrete classes for interaction with various Language Models (LLMs)
-*   `dummy_files/hw.rs`: A dummy file for testing.
+**Related Files and Context**
 
-## Package Structure
+The following files contribute to the functionality of the `meowdoc` package:
 
-The package structure is as follows:
+*   **`mkdocs.py`**:  Handles interactions with MkDocs, including creating MkDocs projects, updating the `mkdocs.yml` configuration file, and enabling themes. It takes the generated documentation and integrates it into the MkDocs site. Crucially, it updates the navigation structure to include the generated documentation.
+*   **`core.py`**:  Contains the core logic for generating documentation using an LLM.  The `MeowdocCore` class reads input files, constructs prompts for the LLM, retrieves the LLM response (the documentation), and writes the generated documentation to Markdown files within the MkDocs `docs` directory.
+*   **`themes.py`**: Defines available themes for the MkDocs documentation and provides functionality to enable them by installing the corresponding `pip` packages.
+*   **`cli.py`**: Provides the command-line interface for `meowdoc`. It parses command-line arguments, loads configuration from a TOML file (`config.toml`), initializes the LLM provider, calls the core documentation generation functions, and updates the MkDocs configuration. It acts as the entry point for the `meowdoc` application.
+*   **`llm.py`**: Defines the `LLMProvider` abstract base class and concrete implementations for different LLMs (Gemini, OpenAI, Ollama). It handles communication with the LLM APIs.
+*   **`dummy_files/hw.rs`**: A dummy file (in Rust, despite the `.rs` extension not being handled correctly by meowdoc) used for testing and demonstration purposes.  It's important because the documentation generator needs to handle files of various types, even if it can't meaningfully generate documentation from them.
 
-```
-meowdoc/
-├── __init__.py
-├── core.py
-├── mkdocs.py
-├── themes.py
-├── cli.py
-├── llm.py
-└── dummy_files/
-    └── hw.rs
+**Usage**
+
+Because `__init__.py` is currently empty, it doesn't provide any directly callable functions.  Its primary purpose is to allow importing modules from the `meowdoc` package.  For example, you would use the following code:
+
+```python
+from meowdoc import core
+from meowdoc import mkdocs
+# ... other imports
 ```
 
-## Usage
+**Future Considerations**
 
-To use `meowdoc`, you can install it using pip:
+While currently empty, the `__init__.py` file could be expanded in the future to:
 
-```bash
-pip install meowdoc
+*   Define package-level constants or variables.
+*   Implement package initialization logic.
+*   Provide a simplified API for common tasks within the package. For example, it could expose a function that encapsulates the entire documentation generation process.
+
+**Example (Hypothetical Future Extension)**
+
+```python
+# __init__.py (Hypothetical)
+from meowdoc.core import MeowdocCore
+from meowdoc.mkdocs import update_mkdocs_nav
+from meowdoc.llm import get_llm_provider
+import os
+
+def generate_documentation(input_path, config_path="config.toml"):
+    """
+    Generates documentation for the given input path using the provided configuration.
+
+    Args:
+        input_path: Path to the file or directory to document.
+        config_path: Path to the configuration file.
+    """
+    # Load config (example - you'd need to implement loading the config)
+    # config = load_config(config_path)
+
+    # Initialize LLM Provider (example)
+    # llm_provider = get_llm_provider(config)
+
+    # Initialize MeowdocCore (example)
+    # generator = MeowdocCore(input_path, ... , llm_provider)
+
+    # Generate documentation (example)
+    # generated_files = generator.process_path()
+
+    # Update MkDocs Nav (example)
+    # is_input_dir = os.path.isdir(input_path)
+    # update_mkdocs_nav(generated_files, is_input_dir, ...)
+
+    pass # Replace with actual implementation.
 ```
 
-Then, you can run it from the command line, providing the path to your project's source code:
-
-```bash
-meowdoc my_project
-```
-
-For more detailed usage instructions, refer to the documentation for `cli.py`.
-
-## Module Details
-
-### `core.py`
-
-The `core.py` module contains the `MeowdocCore` class, which is responsible for:
-
-*   Walking through the input path and identifying files to process.
-*   Reading file contents.
-*   Interacting with the LLM provider to generate documentation.
-*   Creating the `index.md` file for the MkDocs project.
-
-### `mkdocs.py`
-
-The `mkdocs.py` module provides functions for:
-
-*   Creating a new MkDocs project if one doesn't already exist.
-*   Updating the `mkdocs.yml` configuration file with the generated documentation.
-*   Merging configuration settings from a TOML file into the `mkdocs.yml` file.
-*   Deduplicating keys from the `mkdocs.yml` file, keeping the last occurrence.
-
-### `themes.py`
-
-The `themes.py` module defines the available themes and provides a function to install and enable them:
-
-*   `enable_theme(theme)`: Installs the specified theme using pip.
-
-### `cli.py`
-
-The `cli.py` module provides the command-line interface for `meowdoc`. It handles:
-
-*   Parsing command-line arguments.
-*   Loading the configuration file.
-*   Initializing the LLM provider.
-*   Running the documentation generation process.
-
-### `llm.py`
-
-The `llm.py` module defines an abstract base class and concrete classes for interaction with various Language Models (LLMs):
-* `LLMProvider`: Abstract base class for LLM providers.
-* `GeminiProvider`: LLM provider for Google Gemini.
-* `OpenAiProvider`: LLM provider for OpenAI.
-* `OllamaProvider`: LLM provider for Ollama (local LLM).
-* `get_llm_provider`: Factory function for getting LLM provider instances
-
-### `dummy_files/hw.rs`
-
-A file for testing purposes.
-
-## `__init__.py`
-
-This file is intentionally left empty. It signifies that the current directory should be treated as a Python package.  It does not contain any code or perform any actions.
-```
+This hypothetical example shows how the `__init__.py` could be used to create a more user-friendly API for the `meowdoc` package.
