@@ -5,3 +5,4 @@ toml
 openai
 mkdocs-material
 pymdown-extensions
+toml

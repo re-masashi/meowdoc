@@ -59,13 +59,19 @@ def main():
 
     print("processing input path...")
     generated_files = generator.process_path()
+
+    print("processing (pages)...")
+    page_relative_paths = generator.process_docguide_pages()
     
+    print(page_relative_paths)
+    logging.info(f"Processed {len(page_relative_paths)} docguide pages.")
+
     generator.create_project_index()
     print("creating project index")
 
     if generated_files:
         is_input_dir = os.path.isdir(input_path)
-        mkdocs.update_mkdocs_nav(generated_files, is_input_dir, mkdocs_dir, docs_dir_name, project_name, description)
+        mkdocs.update_mkdocs_nav(generated_files, page_relative_paths, is_input_dir, mkdocs_dir, docs_dir_name, project_name, description)
         mkdocs.update_mkdocs_config_from_toml(config, mkdocs_dir)
         print("All docs generated")
 

@@ -9,6 +9,7 @@ from pprint import pprint
 
 def update_mkdocs_nav(
     generated_files,
+    page_relative_paths,
     is_input_dir,
     mkdocs_dir,
     docs_dir_name,
@@ -34,8 +35,8 @@ def update_mkdocs_nav(
 
     mkdocs_config["site_name"] = name
     mkdocs_config["theme"] = {"name": themes.THEMES[theme]["mkdocs_name"]}
+    mkdocs_config["nav"] = []
     nav = mkdocs_config["nav"]
-    # nav = []
 
     if is_input_dir:
         api_section_exists = False
@@ -86,6 +87,11 @@ def update_mkdocs_nav(
         if nav_entry not in nav:
             nav.append(nav_entry)
 
+    nav_keys = list(map(lambda x: list(x.keys())[0], nav))
+    for item in page_relative_paths:
+        if item not in nav_keys:
+            nav.append({os.path.splitext(item)[0]: item})
+    
     try:
         with open(mkdocs_config_path, "w") as f:
             yaml.dump(mkdocs_config, f, indent=2)  # Use indent for better formatting
@@ -151,7 +157,7 @@ def finalize(mkdocs_config):
 def _dedupe_API_elem(elem):
     if elem.get("API") is not None:        
         data = elem["API"]
-        pprint(data)
+        # pprint(data)
         seen_json = set()
         deduplicated_data = []
 
@@ -166,7 +172,7 @@ def _dedupe_API_elem(elem):
                 deduplicated_data.append(d) # Append the original dictionary
 
         elem["API"] = deduplicated_data
-        pprint(deduplicated_data)
+        # pprint(deduplicated_data)
     return elem
 
 def update_mkdocs_config_from_toml(config, mkdocs_dir):

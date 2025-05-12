@@ -3,6 +3,7 @@ import logging
 import fnmatch
 import pathlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import shutil
 
 class MeowdocCore:
     """A class to generate documentation for Python files using LLM and MkDocs."""
@@ -87,13 +88,6 @@ class MeowdocCore:
             logging.exception(f"Error calling LLM: {e}")
             return None
 
-    def create_index(self, mkdocs_dir, docs_dir, readme_content):
-        """Creates the index.md file with the provided content."""
-        index_path = os.path.join(mkdocs_dir, docs_dir, "index.md")
-        with open(index_path, "w", encoding="utf-8") as outfile:
-            outfile.write(readme_content)
-        print(f"README written to: {index_path}")
-
     def should_ignore(self, path, ignore_patterns):
         """Checks if a path or any of its parent directories should be ignored."""
         path = os.path.abspath(
@@ -111,92 +105,6 @@ class MeowdocCore:
             if path == os.path.dirname(path):  # Check for root
                 break
         return False
-
-    # def process_path(self, input_path=None):
-    #     if input_path is None:
-    #         input_path = self.input_path
-
-    #     mkdocs_dir = self.mkdocs_dir
-    #     docs_dir_name = self.docs_dir
-    #     ignore_patterns = self.ignore_patterns
-    #     logging.info(f"Processing path: {input_path}")
-    #     generated_files = []
-
-    #     if ignore_patterns is None:
-    #         ignore_patterns = []
-
-    #     if self.should_ignore(input_path, ignore_patterns):
-    #         logging.info(f"Ignoring path (matches pattern): {input_path}")
-    #         return []
-
-    #     if os.path.abspath(input_path) == os.path.abspath(mkdocs_dir):
-    #         logging.info(f"Ignoring the mkdocs directory: {input_path}")
-    #         return []
-
-    #     docs_dir = os.path.join(mkdocs_dir, docs_dir_name)
-
-    #     if os.path.isfile(input_path):
-    #         logging.info(f"Input is a file: {input_path}")
-    #         if True:
-    #             with open(input_path, "r", encoding="utf-8") as f:
-    #                 all_file_contents = {}
-    #                 all_file_contents[os.path.basename(input_path)] = f.read()
-    #             result = self.generate_docs(input_path, all_file_contents)
-    #             if result is not None:
-    #                 docs = result
-    #                 output_filename = os.path.splitext(os.path.basename(input_path))[0] + ".md"
-    #                 output_path = os.path.join(docs_dir, output_filename)
-    #                 pathlib.Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
-    #                 with open(output_path, "w", encoding="utf-8") as outfile:
-    #                     outfile.write(docs)
-    #                 generated_files.append(output_path)
-    #             else:
-    #                 logging.error("Error generating documentation for %s", input_path)
-    #     elif os.path.isdir(input_path):
-    #         logging.info(f"Input is a directory: {input_path}")
-    #         all_file_contents = {}  # Initialize OUTSIDE
-
-    #         for root, _, files in os.walk(input_path):
-    #             for file in files:
-    #                 file_path = os.path.join(root, file)
-    #                 relative_file_path = os.path.relpath(file_path, input_path)
-
-    #                 if self.should_ignore(file_path, ignore_patterns):
-    #                     logging.info(f"Ignoring file (matches pattern): {file_path}")
-    #                     continue
-
-    #                 if os.path.samefile(file_path, os.path.join(mkdocs_dir, docs_dir_name)):
-    #                     logging.info(f"Ignoring the mkdocs directory: {file_path}")
-    #                     continue
-
-    #                 if True:
-    #                     try:
-    #                         with open(file_path, "r", encoding="utf-8") as f:
-    #                             all_file_contents[relative_file_path] = f.read()  # KEY CHANGE: Relative path as key
-    #                     except Exception as e:
-    #                         logging.error(f"Error reading file {file_path}: {e}")
-    #                         continue
-
-    #                     docs = self.generate_docs(file_path, all_file_contents)  # Full path for generate_docs
-    #                     if docs:
-    #                         output_dir = os.path.join(docs_dir, os.path.dirname(relative_file_path))
-    #                         output_filename = os.path.splitext(os.path.basename(relative_file_path))[0] + ".md"
-    #                         output_path = os.path.join(output_dir, output_filename)
-
-    #                         pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)  # Create all dirs
-
-    #                         with open(output_path, "w", encoding="utf-8") as outfile:
-    #                             outfile.write(docs)
-    #                         generated_files.append(output_path)
-    #                     else:
-    #                         logging.error(f"Error generating docs for {file_path}")
-
-    #     else:
-    #         logging.warning(f"Skipping invalid path: {input_path}")
-
-    #     print(generated_files)
-
-    #     return generated_files
 
     def _collect_files(self):
         """Walk input_path and return list of (file_path, relative_path)."""
@@ -247,6 +155,109 @@ class MeowdocCore:
                 else:
                     logging.error(f"No docs for {fp}")
         return results
+
+    def process_docguide_pages(self):
+        """
+        Processes files in docguide/pages for inclusion in docs.
+        Copies .md files and generates content from .ai.md files using the LLM.
+        Returns a list of relative paths from the docs_dir_name for processed pages.
+        """
+        pages_input_dir = os.path.join("docguide", "(pages)")
+        output_docs_dir_full = os.path.join(self.mkdocs_dir, self.docs_dir)
+        processed_page_relative_paths = []
+
+        if not os.path.exists(pages_input_dir):
+            logging.info(f"Docguide pages directory not found: {pages_input_dir}. Skipping page processing.")
+            return processed_page_relative_paths # Return empty list if directory doesn't exist
+
+        logging.info(f"Processing docguide pages from: {pages_input_dir}")
+
+        # Use ThreadPoolExecutor for processing pages (mix of I/O and LLM calls)
+        with ThreadPoolExecutor() as page_exe:
+             future_to_filepath = {}
+             for root, _, files in os.walk(pages_input_dir):
+                 # Calculate the corresponding output subdirectory relative to docs_dir_name
+                 relative_to_pages_input = os.path.relpath(root, pages_input_dir)
+
+                 for fname in files:
+                     input_filepath = os.path.join(root, fname)
+                     # Only process .md or .ai.md files
+                     if not (fname.endswith(".md") or fname.endswith(".ai.md")):
+                         logging.debug(f"Skipping unsupported file in docguide/pages: {input_filepath}")
+                         continue
+
+                     output_fname_base, ext = os.path.splitext(fname)
+                     # If it's .ai.md, output is .md; if it's .md, output is .md
+                     if ext == '.ai': # Handle .ai.md case specifically
+                         output_fname = output_fname_base # The base name is already the desired filename
+                         output_fname += ".md" # Add the .md extension
+
+                     elif ext == '.md' and not fname.endswith('.ai.md'): # Handle .md files that are not .ai.md
+                          output_fname = fname # Keep original filename
+
+                     else:
+                          logging.debug(f"Skipping file with unexpected extension in docguide/pages: {input_filepath}")
+                          continue
+
+                     # Calculate the full output path within the docs directory
+                     output_filepath = os.path.join(output_docs_dir_full, relative_to_pages_input, output_fname)
+
+                     # Calculate the relative path from docs_dir_name for nav
+                     relative_output_path_for_nav = os.path.relpath(output_filepath, output_docs_dir_full)
+
+                     # Submit task to executor
+                     future_to_filepath[page_exe.submit(
+                         self._process_single_docguide_page,
+                         input_filepath,
+                         output_filepath,
+                         relative_output_path_for_nav,
+                         fname.endswith(".ai.md") # Flag to indicate if AI generation is needed
+                     )] = input_filepath # Store input path for logging errors
+
+             for fut in as_completed(future_to_filepath):
+                 input_filepath = future_to_filepath[fut]
+                 try:
+                      result = fut.result() # result is the relative_output_path_for_nav or None
+                      if result:
+                           processed_page_relative_paths.append(result)
+                 except Exception as e:
+                      logging.error(f"Error processing docguide page {input_filepath}: {e}")
+
+        return processed_page_relative_paths
+
+    def _process_single_docguide_page(self, input_filepath, output_filepath, relative_output_path_for_nav, use_ai):
+         """Helper function to process a single docguide page file."""
+         try:
+             # Ensure output directory exists
+             pathlib.Path(os.path.dirname(output_filepath)).mkdir(parents=True, exist_ok=True)
+
+             if use_ai:
+                 # AI generated Markdown file
+                 logging.info(f"Generating docguide page from prompt: {input_filepath}")
+                 with open(input_filepath, 'r', encoding='utf-8') as prompt_file:
+                     prompt_content = prompt_file.read()
+
+                 generated_content = self.llm_provider.generate(prompt_content)
+
+                 if generated_content:
+                     with open(output_filepath, 'w', encoding='utf-8') as outfile:
+                         outfile.write(generated_content)
+                     logging.info(f"Generated docguide page saved to: {output_filepath}")
+                     return relative_output_path_for_nav # Return relative path on success
+                 else:
+                     logging.warning(f"LLM generated no content for {input_filepath}") # Changed error to warning
+                     return None # Return None if generation failed or empty
+
+             else:
+                 # Direct Markdown file - Copy
+                 logging.info(f"Copying docguide page: {input_filepath} to {output_filepath}")
+                 shutil.copyfile(input_filepath, output_filepath)
+                 logging.info(f"Copied docguide page saved to: {output_filepath}")
+                 return relative_output_path_for_nav # Return relative path on success
+
+         except Exception as e:
+             logging.exception(f"Error processing docguide page {input_filepath}: {e}")
+             return None # Return None on error
 
     def create_project_index(
         self,
